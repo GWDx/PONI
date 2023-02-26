@@ -35,7 +35,7 @@ SPLIT_SCENES = {
             "Collierville",
             "Markleeville",
             "Wiconisco",
-            "Corozal ",
+            "Corozal",
         ],
     },
     "mp3d": {
@@ -155,7 +155,7 @@ OBJECT_CATEGORIES = {
         "fireplace",
         "gym_equipment",
         "seating",
-        "clothes ",
+        "clothes",
     ],
 }
 OBJECT_CATEGORY_MAP = {}

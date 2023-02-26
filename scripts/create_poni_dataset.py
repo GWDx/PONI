@@ -109,7 +109,7 @@ if __name__ == "__main__":
     parser.add_argument('--map-id', type=int, default=-1)
     parser.add_argument('--map-id-range', type=int, nargs="+", default=None)
     parser.add_argument('--split', type=str, required=True)
-    parser.add_argument('--num-workers', type=int, default=25)
+    parser.add_argument('--num-workers', type=int, default=12)
     args = parser.parse_args()
 
     # Both map-id and map-id-range should not be enabled simultaneously

@@ -6,6 +6,7 @@ import os
 import tqdm
 from poni.dataset import SemanticMapDataset
 from poni.default import get_cfg
+from icecream import ic
 
 assert "ACTIVE_DATASET" in os.environ
 ACTIVE_DATASET = os.environ["ACTIVE_DATASET"]
@@ -28,6 +29,7 @@ def precompute_fmm_dists():
     cfg.DATASET.dset_name = ACTIVE_DATASET
     cfg.DATASET.root = DATA_ROOT
     cfg.DATASET.fmm_dists_saved_root = ""
+    ic(cfg.DATASET)
     cfg.freeze()
     os.makedirs(SAVE_ROOT, exist_ok=True)
     pool = mp.Pool(NUM_WORKERS)
@@ -36,6 +38,7 @@ def precompute_fmm_dists():
         print(f"=====> Computing FMM dists for {split} split")
         dataset = SemanticMapDataset(cfg.DATASET, split=split)
         print("--> Saving FMM dists")
+        ic(dataset.names)
         inputs = []
         for name in dataset.names:
             save_path = os.path.join(SAVE_ROOT, f"{name}.pbz2")
