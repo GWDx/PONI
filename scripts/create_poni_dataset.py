@@ -20,7 +20,8 @@ MASKING_SHAPE = "square"
 SEED = 123
 DATA_ROOT = "data/semantic_maps/{}/semantic_maps".format(DATASET)
 FMM_DISTS_SAVED_ROOT = "data/semantic_maps/{}/fmm_dists_{}".format(DATASET, SEED)
-NUM_SAMPLES = {'train': 400000, 'val': 1000}
+# NUM_SAMPLES = {'train': 400000, 'val': 1000}
+NUM_SAMPLES = {'train': 400, 'val': 100}
 SAVE_ROOT = "data/semantic_maps/{}/precomputed_dataset_{}_{}_{}_{}".format(DATASET, OUTPUT_MAP_SIZE, SEED, MASKING_MODE,
                                                                            MASKING_SHAPE)
 
