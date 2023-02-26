@@ -21,9 +21,7 @@ def get_args():
     )
     parser.add_argument("--num_processes_per_gpu", type=int, default=6)
     parser.add_argument("--num_processes_on_first_gpu", type=int, default=1)
-    parser.add_argument(
-        "--eval", type=int, default=0, help="0: Train, 1: Evaluate (default: 0)"
-    )
+    parser.add_argument("--eval", type=int, default=0, help="0: Train, 1: Evaluate (default: 0)")
     parser.add_argument(
         "--num_training_frames",
         type=int,
@@ -43,12 +41,8 @@ def get_args():
         help="""number of train episodes per scene
                                 before loading the next scene""",
     )
-    parser.add_argument(
-        "--no_cuda", action="store_true", default=False, help="disables CUDA training"
-    )
-    parser.add_argument(
-        "--sim_gpu_id", type=int, default=0, help="gpu id on which scenes are loaded"
-    )
+    parser.add_argument("--no_cuda", action="store_true", default=False, help="disables CUDA training")
+    parser.add_argument("--sim_gpu_id", type=int, default=0, help="gpu id on which scenes are loaded")
     parser.add_argument(
         "--sem_gpu_id",
         type=int,
@@ -65,9 +59,7 @@ def get_args():
         help="""log interval, one log per n updates
                                 (default: 10) """,
     )
-    parser.add_argument(
-        "--save_interval", type=int, default=1, help="""save interval"""
-    )
+    parser.add_argument("--save_interval", type=int, default=1, help="""save interval""")
     parser.add_argument(
         "-d",
         "--dump_location",
@@ -75,9 +67,7 @@ def get_args():
         default="./tmp/",
         help="path to dump models and log (default: ./tmp/)",
     )
-    parser.add_argument(
-        "--exp_name", type=str, default="exp1", help="experiment name (default: exp1)"
-    )
+    parser.add_argument("--exp_name", type=str, default="exp1", help="experiment name (default: exp1)")
     parser.add_argument(
         "--load",
         type=str,
@@ -96,9 +86,7 @@ def get_args():
                                    predictions and the predicted semantic map
                                 (default: 0)""",
     )
-    parser.add_argument(
-        "--print_images", type=int, default=0, help="1: save visualization as images"
-    )
+    parser.add_argument("--print_images", type=int, default=0, help="1: save visualization as images")
 
     # Environment, dataset and episode specifications
     parser.add_argument(
@@ -121,9 +109,7 @@ def get_args():
         default=480,
         help="Frame height (default:480)",
     )
-    parser.add_argument(
-        "-fw", "--frame_width", type=int, default=160, help="Frame width (default:160)"
-    )
+    parser.add_argument("-fw", "--frame_width", type=int, default=160, help="Frame width (default:160)")
     parser.add_argument(
         "-fh",
         "--frame_height",
@@ -156,12 +142,8 @@ def get_args():
         default=0.88,
         help="agent camera height in metres",
     )
-    parser.add_argument(
-        "--hfov", type=float, default=79.0, help="horizontal field of view in degrees"
-    )
-    parser.add_argument(
-        "--turn_angle", type=float, default=30, help="Agent turn angle in degrees"
-    )
+    parser.add_argument("--hfov", type=float, default=79.0, help="horizontal field of view in degrees")
+    parser.add_argument("--turn_angle", type=float, default=30, help="Agent turn angle in degrees")
     parser.add_argument(
         "--min_depth",
         type=float,
@@ -180,9 +162,7 @@ def get_args():
         default=1.0,
         help="success distance threshold in meters",
     )
-    parser.add_argument(
-        "--floor_thr", type=int, default=50, help="floor threshold in cm"
-    )
+    parser.add_argument("--floor_thr", type=int, default=50, help="floor threshold in cm")
     parser.add_argument(
         "--min_d",
         type=float,
@@ -196,9 +176,7 @@ def get_args():
         help="max distance to goal during training in meters",
     )
     parser.add_argument("--version", type=str, default="v1.1", help="dataset version")
-    parser.add_argument(
-        "--num_goals", type=int, default=1, help="number of goals to reach in task"
-    )
+    parser.add_argument("--num_goals", type=int, default=1, help="number of goals to reach in task")
     parser.add_argument(
         "--success_distance",
         type=float,
@@ -209,9 +187,7 @@ def get_args():
     # Model Hyperparameters
     parser.add_argument("--agent", type=str, default="sem_exp")
     parser.add_argument("--main_model", type=str, default="simple_cnn")
-    parser.add_argument(
-        "--lr", type=float, default=2.5e-5, help="learning rate (default: 2.5e-5)"
-    )
+    parser.add_argument("--lr", type=float, default=2.5e-5, help="learning rate (default: 2.5e-5)")
     parser.add_argument(
         "--lr_schedule",
         type=float,
@@ -219,15 +195,9 @@ def get_args():
         default=[],
         help="lr decay schedule for MultiStepLR (in steps)",
     )
-    parser.add_argument(
-        "--global_hidden_size", type=int, default=256, help="global_hidden_size"
-    )
-    parser.add_argument(
-        "--eps", type=float, default=1e-5, help="RL Optimizer epsilon (default: 1e-5)"
-    )
-    parser.add_argument(
-        "--alpha", type=float, default=0.99, help="RL Optimizer alpha (default: 0.99)"
-    )
+    parser.add_argument("--global_hidden_size", type=int, default=256, help="global_hidden_size")
+    parser.add_argument("--eps", type=float, default=1e-5, help="RL Optimizer epsilon (default: 1e-5)")
+    parser.add_argument("--alpha", type=float, default=0.99, help="RL Optimizer alpha (default: 0.99)")
     parser.add_argument(
         "--gamma",
         type=float,
@@ -240,9 +210,7 @@ def get_args():
         default=False,
         help="use generalized advantage estimation",
     )
-    parser.add_argument(
-        "--tau", type=float, default=0.95, help="gae parameter (default: 0.95)"
-    )
+    parser.add_argument("--tau", type=float, default=0.95, help="gae parameter (default: 0.95)")
     parser.add_argument(
         "--entropy_coef",
         type=float,
@@ -267,9 +235,7 @@ def get_args():
         default=20,
         help="number of forward steps in A2C (default: 5)",
     )
-    parser.add_argument(
-        "--ppo_epoch", type=int, default=4, help="number of ppo epochs (default: 4)"
-    )
+    parser.add_argument("--ppo_epoch", type=int, default=4, help="number of ppo epochs (default: 4)")
     parser.add_argument(
         "--num_mini_batch",
         type=str,
@@ -295,9 +261,7 @@ def get_args():
         help="""Number of steps the local policy
                                 between each global step""",
     )
-    parser.add_argument(
-        "--reward_coeff", type=float, default=0.1, help="Object goal reward coefficient"
-    )
+    parser.add_argument("--reward_coeff", type=float, default=0.1, help="Object goal reward coefficient")
     parser.add_argument(
         "--intrinsic_rew_coeff",
         type=float,
@@ -350,9 +314,7 @@ def get_args():
         help="uses the nearest frontier instead of argmax PF",
     )
     parser.add_argument("--add_agent2loc_distance", action="store_true", default=False)
-    parser.add_argument(
-        "--add_agent2loc_distance_v2", action="store_true", default=False
-    )
+    parser.add_argument("--add_agent2loc_distance_v2", action="store_true", default=False)
     parser.add_argument("--mask_nearest_locations", action="store_true", default=False)
     parser.add_argument(
         "--mask_size",
@@ -365,9 +327,7 @@ def get_args():
     parser.add_argument("--num_pf_maps", type=int, default=0)
     parser.add_argument("--use_gt_segmentation", action="store_true", default=False)
 
-    parser.add_argument(
-        "--use_egocentric_transform", action="store_true", default=False
-    )
+    parser.add_argument("--use_egocentric_transform", action="store_true", default=False)
 
     # parse arguments
     args = parser.parse_args()
@@ -384,9 +344,7 @@ def get_args():
             elif "objectnav_gibson" in args.task_config and "val" in args.split:
                 args.total_num_scenes = 5
             else:
-                assert False, (
-                    "Unknown task config, please specify" + " total_num_scenes"
-                )
+                assert False, ("Unknown task config, please specify" + " total_num_scenes")
 
             # GPU Memory required for the SemExp model:
             #       0.8 + 0.4 * args.total_num_scenes (GB)
@@ -398,58 +356,35 @@ def get_args():
             for i in range(num_gpus):
                 gpu_memory = min(
                     gpu_memory,
-                    torch.cuda.get_device_properties(i).total_memory
-                    / 1024
-                    / 1024
-                    / 1024,
+                    torch.cuda.get_device_properties(i).total_memory / 1024 / 1024 / 1024,
                 )
-                assert (
-                    gpu_memory > min_memory_required
-                ), """Insufficient GPU memory for GPU {}, gpu memory ({}GB)
-                    needs to be greater than {}GB""".format(
-                    i, gpu_memory, min_memory_required
-                )
+                assert (gpu_memory > min_memory_required), """Insufficient GPU memory for GPU {}, gpu memory ({}GB)
+                    needs to be greater than {}GB""".format(i, gpu_memory, min_memory_required)
 
             num_processes_per_gpu = int(gpu_memory / 3.0)
             num_processes_on_first_gpu = int((gpu_memory - min_memory_required) / 3.0)
 
             if args.eval:
-                max_threads = (
-                    num_processes_per_gpu * (num_gpus - 1) + num_processes_on_first_gpu
-                )
-                assert (
-                    max_threads >= args.total_num_scenes
-                ), """Insufficient GPU memory for evaluation"""
+                max_threads = (num_processes_per_gpu * (num_gpus - 1) + num_processes_on_first_gpu)
+                assert (max_threads >= args.total_num_scenes), """Insufficient GPU memory for evaluation"""
 
             if num_gpus == 1:
-                args.num_processes_on_first_gpu = min(
-                    num_processes_on_first_gpu, args.total_num_scenes
-                )
+                args.num_processes_on_first_gpu = min(num_processes_on_first_gpu, args.total_num_scenes)
                 args.num_processes_per_gpu = 0
-                args.num_processes = min(
-                    num_processes_on_first_gpu, args.total_num_scenes
-                )
+                args.num_processes = min(num_processes_on_first_gpu, args.total_num_scenes)
                 assert args.num_processes > 0, "Insufficient GPU memory"
             else:
-                num_threads = (
-                    num_processes_per_gpu * (num_gpus - 1) + num_processes_on_first_gpu
-                )
+                num_threads = (num_processes_per_gpu * (num_gpus - 1) + num_processes_on_first_gpu)
                 num_threads = min(num_threads, args.total_num_scenes)
                 args.num_processes_per_gpu = num_processes_per_gpu
-                args.num_processes_on_first_gpu = max(
-                    0, num_threads - args.num_processes_per_gpu * (num_gpus - 1)
-                )
+                args.num_processes_on_first_gpu = max(0, num_threads - args.num_processes_per_gpu * (num_gpus - 1))
                 args.num_processes = num_threads
 
             args.sim_gpu_id = 1
 
             print("Auto GPU config:")
             print("Number of processes: {}".format(args.num_processes))
-            print(
-                "Number of processes on GPU 0: {}".format(
-                    args.num_processes_on_first_gpu
-                )
-            )
+            print("Number of processes on GPU 0: {}".format(args.num_processes_on_first_gpu))
             print("Number of processes per GPU: {}".format(args.num_processes_per_gpu))
     else:
         args.sem_gpu_id = -2

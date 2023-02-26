@@ -49,8 +49,9 @@ def is_int(s):
 
 
 class SemanticMapDataset(Dataset):
-    grid_size = 0.05 # m
-    object_boundary = 1.0 # m
+    grid_size = 0.05  # m
+    object_boundary = 1.0  # m
+
     def __init__(
         self,
         cfg,
@@ -132,7 +133,10 @@ class SemanticMapDataset(Dataset):
         if self.cfg.masking_mode == 'spath':
             spath = self.get_random_shortest_path(nav_space, nav_locs)
             input, label = self.create_spath_based_input_output_pairs(
-                semmap, fmm_dists, spath, map_xyz_info,
+                semmap,
+                fmm_dists,
+                spath,
+                map_xyz_info,
             )
         else:
             raise ValueError(f"Masking mode {self.cfg.masking_mode} is not implemented!")
@@ -251,16 +255,14 @@ class SemanticMapDataset(Dataset):
             y, x = int(y), int(x)
             if self.cfg.masking_shape == 'square':
                 S = int(self.visibility_size / self.grid_size / 2.0)
-                vis_map[(y - S) : (y + S), (x - S) : (x + S)] = 1
+                vis_map[(y - S):(y + S), (x - S):(x + S)] = 1
             else:
                 raise ValueError(f'Masking shape {self.cfg.masking_shape} not defined!')
 
         vis_map = torch.from_numpy(vis_map).float()
         return vis_map
 
-    def create_spath_based_input_output_pairs(
-        self, semmap, fmm_dists, spath, map_xyz_info
-    ):
+    def create_spath_based_input_output_pairs(self, semmap, fmm_dists, spath, map_xyz_info):
         out_semmap = torch.from_numpy(semmap)
         out_fmm_dists = torch.from_numpy(fmm_dists) * self.grid_size
         in_semmap = out_semmap.clone()
@@ -272,13 +274,11 @@ class SemanticMapDataset(Dataset):
         Wby2, Hby2 = out_semmap.shape[2] // 2, out_semmap.shape[1] // 2
         tform_trans = torch.Tensor([[center[1] - Wby2, center[0] - Hby2, 0]])
         tform_rot = torch.Tensor([[0, 0, rot]])
-        (
-            in_semmap, out_semmap, out_fmm_dists, agent_fmm_dist, out_masks
-        ) = self.transform_input_output_pairs(
-            in_semmap, out_semmap, out_fmm_dists, tform_trans, tform_rot)
+        (in_semmap, out_semmap, out_fmm_dists, agent_fmm_dist,
+         out_masks) = self.transform_input_output_pairs(in_semmap, out_semmap, out_fmm_dists, tform_trans, tform_rot)
         # Get real-world position and orientation of agent
         world_xyz = self.get_world_coordinates(center, map_xyz_info)
-        world_heading = -rot # Agent turning leftward is positive in habitat
+        world_heading = -rot  # Agent turning leftward is positive in habitat
         scene_name = map_xyz_info['scene_name']
         object_pfs = self.compute_object_pfs(out_fmm_dists)
         return in_semmap, {
@@ -292,9 +292,7 @@ class SemanticMapDataset(Dataset):
             'scene_name': scene_name,
         }
 
-    def transform_input_output_pairs(
-        self, in_semmap, out_semmap, out_fmm_dists, tform_trans, tform_rot
-    ):
+    def transform_input_output_pairs(self, in_semmap, out_semmap, out_fmm_dists, tform_trans, tform_rot):
         # Invert fmm_dists for transformations (since padding is zeros)
         max_dist = out_fmm_dists[out_fmm_dists != math.inf].max() + 1
         out_fmm_dists = 1 / (out_fmm_dists + EPS)
@@ -322,15 +320,13 @@ class SemanticMapDataset(Dataset):
         out_fmm_dists = crop_map(out_fmm_dists, map_center, map_size, 'nearest')
         # Create a scaling-mask for the loss function. By default, select
         # only navigable / object regions (where fmm_dists exists).
-        out_masks = (out_semmap[0, FLOOR_ID] >= 0.5).float() # (H, W)
+        out_masks = (out_semmap[0, FLOOR_ID] >= 0.5).float()  # (H, W)
         out_masks = repeat(out_masks, 'h w -> () n h w', n=N)
         # Mask out potential fields based on input regions
         if self.cfg.potential_function_masking:
             # Compute frontier locations
-            unk_map = (
-                torch.max(in_semmap, dim=1).values[0] < 0.5
-            ).float().numpy() # (H, W)
-            free_map = (in_semmap[0, FLOOR_ID] >= 0.5).float().numpy() # (H, W)
+            unk_map = (torch.max(in_semmap, dim=1).values[0] < 0.5).float().numpy()  # (H, W)
+            free_map = (in_semmap[0, FLOOR_ID] >= 0.5).float().numpy()  # (H, W)
             frontiers = get_frontiers_np(unk_map, free_map)
             frontiers = torch.from_numpy(frontiers).float().unsqueeze(0).unsqueeze(1)
 
@@ -359,11 +355,11 @@ class SemanticMapDataset(Dataset):
         # Invert fmm_dists for transformations (since padding, new pixels, etc are zeros)
         out_fmm_dists = torch.clamp(1 / (out_fmm_dists + EPS), 0.0, max_dist)
         # Compute distance from agent to all locations on the map
-        nav_map = out_semmap[FLOOR_ID].numpy() # (H, W)
+        nav_map = out_semmap[FLOOR_ID].numpy()  # (H, W)
         planner = FMMPlanner(nav_map)
         agent_map = np.zeros(nav_map.shape, dtype=np.float32)
         Hby2, Wby2 = agent_map.shape[0] // 2, agent_map.shape[1] // 2
-        agent_map[Hby2 - 1 : Hby2 + 2, Wby2 - 1 : Wby2 + 2] = 1
+        agent_map[Hby2 - 1:Hby2 + 2, Wby2 - 1:Wby2 + 2] = 1
         selem = skmp.disk(int(self.object_boundary / 2.0 / self.grid_size))
         agent_map = skmp.binary_dilation(agent_map, selem) != True
         agent_map = 1 - agent_map
@@ -374,23 +370,29 @@ class SemanticMapDataset(Dataset):
 
     @staticmethod
     def visualize_map(semmap, bg=1.0, dataset='gibson'):
-        n_cat = semmap.shape[0] - 2 # Exclude floor and wall
+        n_cat = semmap.shape[0] - 2  # Exclude floor and wall
+
         def compress_semmap(semmap):
             c_map = np.zeros((semmap.shape[1], semmap.shape[2]))
             for i in range(semmap.shape[0]):
-                c_map[semmap[i] > 0.] = i+1
+                c_map[semmap[i] > 0.] = i + 1
             return c_map
 
         palette = [
-            int(bg * 255), int(bg * 255), int(bg * 255), # Out of bounds
-            230, 230, 230, # Free space
-            77, 77, 77, # Obstacles
+            int(bg * 255),
+            int(bg * 255),
+            int(bg * 255),  # Out of bounds
+            230,
+            230,
+            230,  # Free space
+            77,
+            77,
+            77,  # Obstacles
         ]
         if dataset == 'gibson':
             palette += [int(x * 255.) for x in gibson_palette[15:]]
         else:
-            palette += [c for color in d3_40_colors_rgb[:n_cat]
-                        for c in color.tolist()]
+            palette += [c for color in d3_40_colors_rgb[:n_cat] for c in color.tolist()]
         semmap = asnumpy(semmap)
         c_map = compress_semmap(semmap)
         semantic_img = Image.new("P", (c_map.shape[1], c_map.shape[0]))
@@ -402,9 +404,7 @@ class SemanticMapDataset(Dataset):
         return semantic_img
 
     @staticmethod
-    def visualize_object_pfs(
-        in_semmap, semmap, object_pfs, dirs=None, locs=None, dataset='gibson'
-    ):
+    def visualize_object_pfs(in_semmap, semmap, object_pfs, dirs=None, locs=None, dataset='gibson'):
         """
         semmap - (C, H, W)
         object_pfs - (C, H, W)
@@ -450,8 +450,8 @@ class SemanticMapDataset(Dataset):
         """
         semmap = asnumpy(semmap)
         offset = OBJECT_CATEGORIES[dset].index('chair')
-        object_pfs = asnumpy(object_pfs)[cat_id + offset] # (H, W)
-        object_pfs = object_pfs[..., np.newaxis] # (H, W)
+        object_pfs = asnumpy(object_pfs)[cat_id + offset]  # (H, W)
+        object_pfs = object_pfs[..., np.newaxis]  # (H, W)
         semmap_rgb = SemanticMapDataset.visualize_map(semmap, bg=1.0, dataset=dset)
         red_image = np.zeros_like(semmap_rgb)
         red_image[..., 0] = 255
@@ -466,25 +466,32 @@ class SemanticMapDataset(Dataset):
         are_pfs - (1, H, W)
         """
         semmap = asnumpy(semmap)
-        pfs = asnumpy(area_pfs)[0] # (H, W)
-        pfs = pfs[..., np.newaxis] # (H, W)
+        pfs = asnumpy(area_pfs)[0]  # (H, W)
+        pfs = pfs[..., np.newaxis]  # (H, W)
         semmap_rgb = SemanticMapDataset.visualize_map(semmap, bg=1.0, dataset=dset)
         red_image = np.zeros_like(semmap_rgb)
         red_image[..., 0] = 255
         smpf = red_image * pfs + semmap_rgb * (1 - pfs)
         smpf = smpf.astype(np.uint8)
-        
+
         return smpf
 
     @staticmethod
     def combine_image_grid(
-        in_semmap, out_semmap, gt_object_pfs, pred_object_pfs=None,
-        gt_acts=None, gt_area_pfs=None, pred_area_pfs=None, dset=None,
-        n_per_row=8, pad=2, border_color=200, output_width=1024,
+        in_semmap,
+        out_semmap,
+        gt_object_pfs,
+        pred_object_pfs=None,
+        gt_acts=None,
+        gt_area_pfs=None,
+        pred_area_pfs=None,
+        dset=None,
+        n_per_row=8,
+        pad=2,
+        border_color=200,
+        output_width=1024,
     ):
-        img_and_titles = [
-            (in_semmap, 'Input map'), (out_semmap, 'Full output map')
-        ]
+        img_and_titles = [(in_semmap, 'Input map'), (out_semmap, 'Full output map')]
         if gt_area_pfs is not None:
             img_and_titles.append((gt_area_pfs, 'GT Area map'))
         if pred_area_pfs is not None:
@@ -508,8 +515,7 @@ class SemanticMapDataset(Dataset):
         for img, title in img_and_titles:
             cimg = SemanticMapDataset.add_title_to_image(img, title)
             # Pad image
-            cimg = np.pad(cimg, ((pad, pad), (pad, pad), (0, 0)),
-                          mode='constant', constant_values=border_color)
+            cimg = np.pad(cimg, ((pad, pad), (pad, pad), (0, 0)), mode='constant', constant_values=border_color)
             imgs.append(cimg)
 
         # Convert to grid
@@ -522,20 +528,15 @@ class SemanticMapDataset(Dataset):
         for i, img in enumerate(imgs):
             r = i // n_per_row
             c = i % n_per_row
-            grid_img[r * H : (r + 1) * H, c * W : (c + 1) * W] = img
+            grid_img[r * H:(r + 1) * H, c * W:(c + 1) * W] = img
         # Rescale image
         if output_width is not None:
-            output_height = int(
-                output_width * grid_img.shape[0] / grid_img.shape[1]
-            )
+            output_height = int(output_width * grid_img.shape[0] / grid_img.shape[1])
             grid_img = cv2.resize(grid_img, (output_width, output_height))
         return grid_img
 
     @staticmethod
-    def add_title_to_image(
-        img: np.ndarray, title: str, font_size: int = 50, bg_color=200,
-        fg_color=(0, 0, 255)
-    ):
+    def add_title_to_image(img: np.ndarray, title: str, font_size: int = 50, bg_color=200, fg_color=(0, 0, 255)):
         font_img = np.zeros((font_size, img.shape[1], 3), dtype=np.uint8)
         font_img.fill(bg_color)
         font_img = Image.fromarray(font_img)
@@ -557,9 +558,7 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
         random.seed(cfg.seed)
         np.random.seed(cfg.seed)
         # Load map paths
-        map_paths = sorted(
-            glob.glob(osp.join(cfg.root, split, f"**/*.pbz2"), recursive=True)
-        )
+        map_paths = sorted(glob.glob(osp.join(cfg.root, split, f"**/*.pbz2"), recursive=True))
         self.map_paths = map_paths
         # Both locations and directions cannot be enabled at the same time.
         assert not (self.cfg.enable_locations and self.cfg.enable_directions)
@@ -583,8 +582,7 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
         # Compute object_pfs
         object_pfs = self.compute_object_pfs(fmm_dists)
         loss_masks, masks, dirs, locs, area_pfs, acts, frontiers = self.get_masks_and_labels(
-            in_semmap, semmap, fmm_dists
-        )
+            in_semmap, semmap, fmm_dists)
         if self.cfg.potential_function_masking:
             object_pfs = torch.clamp(object_pfs * masks, 0.0, 1.0)
 
@@ -627,46 +625,40 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
         N = in_semmap.shape[1]
         # Create a scaling-mask for the loss function / potential field
         # By default, select only navigable/object regions where fmm dist exists
-        out_base_masks = torch.any(out_semmap, dim=1, keepdim=True) # (1, 1, H, W)
+        out_base_masks = torch.any(out_semmap, dim=1, keepdim=True)  # (1, 1, H, W)
         out_base_masks = repeat(out_base_masks, '() () h w -> () n h w', n=N).float()
         ################### Build mask based on input regions ##################
         # Compute an advanced mask based on input regions.
-        out_masks = torch.any(out_semmap, dim=1, keepdim=True) # (1, 1, H, W)
+        out_masks = torch.any(out_semmap, dim=1, keepdim=True)  # (1, 1, H, W)
         out_masks = repeat(out_masks, '() () h w -> () n h w', n=N).float()
         # Compute frontier locations
-        free_map = in_semmap[0, FLOOR_ID] # (H, W)
+        free_map = in_semmap[0, FLOOR_ID]  # (H, W)
         # Dilate the free map
         if self.cfg.dilate_free_map:
             free_map = free_map.float().unsqueeze(0).unsqueeze(1)
             for i in range(self.cfg.dilate_iters):
-                free_map = torch.nn.functional.max_pool2d(
-                    free_map, 7, stride=1, padding=3
-                )
+                free_map = torch.nn.functional.max_pool2d(free_map, 7, stride=1, padding=3)
             free_map = free_map.bool().squeeze(1).squeeze(0)
-        exp_map = torch.any(in_semmap, dim=1)[0] # (H, W)
+        exp_map = torch.any(in_semmap, dim=1)[0]  # (H, W)
         exp_map = exp_map | free_map
         unk_map = ~exp_map
         unk_map = unk_map.numpy()
         free_map = free_map.numpy()
-        frontiers = get_frontiers_np(unk_map, free_map) # (H, W)
+        frontiers = get_frontiers_np(unk_map, free_map)  # (H, W)
         # Compute contours of frontiers
         contours = None
         if self.cfg.enable_unexp_area:
-            contours, _ = cv2.findContours(
-                frontiers.astype(np.uint8),
-                cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
-            )
-            contours = [contour[:, 0].tolist() for contour in contours] # Clean format
+            contours, _ = cv2.findContours(frontiers.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            contours = [contour[:, 0].tolist() for contour in contours]  # Clean format
         frontiers = torch.from_numpy(frontiers).unsqueeze(0).unsqueeze(1)
         # Dilate the frontiers mask
-        frontiers_mask = torch.nn.functional.max_pool2d(
-            frontiers.float(), 7, stride=1, padding=3
-        ).bool() # (1, N or 1, H, W)
+        frontiers_mask = torch.nn.functional.max_pool2d(frontiers.float(), 7, stride=1,
+                                                        padding=3).bool()  # (1, N or 1, H, W)
         # Scaling at the frontiers
         alpha = self.cfg.potential_function_frontier_scaling
         # Scaling at the non-visible regions
         beta = self.cfg.potential_function_non_visible_scaling
-        visibility_mask = torch.any(in_semmap, dim=1, keepdim=True) # (1, 1, H, W)
+        visibility_mask = torch.any(in_semmap, dim=1, keepdim=True)  # (1, 1, H, W)
         # Scaling at the visible & non-frontier regions
         gamma = self.cfg.potential_function_non_frontier_scaling
         not_frontier_or_visible = ~(visibility_mask | frontiers_mask)
@@ -686,14 +678,12 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
             out_dirs = []
             all_dirs = np.array(self.cfg.prediction_directions)
             ndir = len(self.cfg.prediction_directions)
-            for sem_map in out_semmap[0]: # (H, W)
+            for sem_map in out_semmap[0]:  # (H, W)
                 sem_map = sem_map.cpu().numpy()
                 H, W = sem_map.shape
                 Hby2, Wby2 = H // 2, W // 2
                 # Discover connected components (i.e., object instances)
-                _, _, _, centroids = cv2.connectedComponentsWithStats(
-                    sem_map.astype(np.uint8) * 255 , 4 , cv2.CV_32S
-                )
+                _, _, _, centroids = cv2.connectedComponentsWithStats(sem_map.astype(np.uint8) * 255, 4, cv2.CV_32S)
                 # Ignore 1st element of centroid since it's the image center
                 centroids = centroids[1:]
                 if len(centroids) == 0:
@@ -702,7 +692,7 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
                     continue
                 map_y, map_x = centroids[:, 1], centroids[:, 0]
                 # Pick closest instance of the object
-                dists = np.sqrt((map_y - Hby2) ** 2 + (map_x - Wby2) ** 2)
+                dists = np.sqrt((map_y - Hby2)**2 + (map_x - Wby2)**2)
                 min_idx = np.argmin(dists)
                 obj_y, obj_x = map_y[min_idx], map_x[min_idx]
                 obj_dir = np.arctan2(obj_y - Hby2, obj_x - Wby2)
@@ -710,7 +700,7 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
                 # Classify obj_dir into [0, ..., ndir-1] classes
                 dir_cls = np.argmin(np.abs(all_dirs - obj_dir))
                 out_dirs.append(dir_cls)
-            out_dirs = torch.LongTensor(out_dirs).to(out_masks.device) # (N, )
+            out_dirs = torch.LongTensor(out_dirs).to(out_masks.device)  # (N, )
         # Compute position to each object from map center if needed
         ## For each category, pick the object nearest (euclidean distance) to the center
         ## The compute the central position of the object in this map.
@@ -719,14 +709,12 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
         out_locs = None
         if self.cfg.enable_locations:
             out_locs = []
-            for sem_map in out_semmap[0]: # (H, W)
+            for sem_map in out_semmap[0]:  # (H, W)
                 sem_map = sem_map.cpu().numpy()
                 H, W = sem_map.shape
                 Hby2, Wby2 = H // 2, W // 2
                 # Discover connected components (i.e., object instances)
-                _, _, _, centroids = cv2.connectedComponentsWithStats(
-                    sem_map.astype(np.uint8) * 255 , 4 , cv2.CV_32S
-                )
+                _, _, _, centroids = cv2.connectedComponentsWithStats(sem_map.astype(np.uint8) * 255, 4, cv2.CV_32S)
                 # Ignore 1st element of centroid since it's the image center
                 centroids = centroids[1:]
                 if len(centroids) == 0:
@@ -734,25 +722,25 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
                     continue
                 map_y, map_x = centroids[:, 1], centroids[:, 0]
                 # Pick closest instance of the object
-                dists = np.sqrt((map_y - Hby2) ** 2 + (map_x - Wby2) ** 2)
+                dists = np.sqrt((map_y - Hby2)**2 + (map_x - Wby2)**2)
                 min_idx = np.argmin(dists)
                 obj_y, obj_x = map_y[min_idx], map_x[min_idx]
                 # Normalize this to (0, 1) range
                 obj_y = obj_y / H
                 obj_x = obj_x / W
                 out_locs.append((obj_x, obj_y))
-            out_locs = torch.Tensor(out_locs).to(out_masks.device) # (N, 2)
+            out_locs = torch.Tensor(out_locs).to(out_masks.device)  # (N, 2)
         # Compute action needed to reach each object from map center if needed.
         ## Assume that the agent is at the map center, facing right.
         out_acts = None
         if hasattr(self.cfg, 'enable_actions') and self.cfg.enable_actions:
             out_acts = []
-            traversible = out_semmap[0, 0] | (~torch.any(out_semmap[0], dim=0)) # (H, W)
+            traversible = out_semmap[0, 0] | (~torch.any(out_semmap[0], dim=0))  # (H, W)
             planner = FMMPlanner(traversible.float().cpu().numpy())
             H, W = traversible.shape
             Hby2, Wby2 = H // 2, W // 2
             traversible[Hby2 - 3:Hby2 + 4, Wby2 - 3:Wby2 + 4] = 1
-            for i, (sem_map, fmm_dist) in enumerate(zip(out_semmap[0], out_fmm_dists[0])): # (H, W)
+            for i, (sem_map, fmm_dist) in enumerate(zip(out_semmap[0], out_fmm_dists[0])):  # (H, W)
                 sem_map = sem_map.cpu().numpy()
                 # Use pre-computed fmm dists
                 fmm_dist = fmm_dist.cpu().numpy()
@@ -772,46 +760,41 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
                 start = (H // 2, W // 2)
                 stg_x, stg_y, _, stop = planner.get_short_term_goal(start)
                 if stop:
-                    out_acts.append(0) # STOP
+                    out_acts.append(0)  # STOP
                 else:
-                    angle_st_goal = math.degrees(math.atan2(stg_x - start[0],
-                                                            stg_y - start[1]))
+                    angle_st_goal = math.degrees(math.atan2(stg_x - start[0], stg_y - start[1]))
                     angle_agent = 0.0
                     relative_angle = (angle_agent - angle_st_goal) % 360.0
                     if relative_angle > 180:
                         relative_angle -= 360
-                    
+
                     if relative_angle > self.cfg.turn_angle / 2.0:
-                        out_acts.append(3) # TURN-RIGHT
+                        out_acts.append(3)  # TURN-RIGHT
                     elif relative_angle < -self.cfg.turn_angle / 2.0:
-                        out_acts.append(2) # TURN-RIGHT
+                        out_acts.append(2)  # TURN-RIGHT
                     else:
-                        out_acts.append(1) # MOVE-FORWARD
-            out_acts = torch.Tensor(out_acts).long().to(out_masks.device) # (N,)
+                        out_acts.append(1)  # MOVE-FORWARD
+            out_acts = torch.Tensor(out_acts).long().to(out_masks.device)  # (N,)
 
         # Compute unexplored free-space starting from each frontier
         out_area_pfs = None
         if self.cfg.enable_unexp_area:
-            floor_map = out_semmap[0, FLOOR_ID] # (H, W)
-            unexp_map = ~torch.any(in_semmap[0], dim=0) # (H, W)
-            unexp_floor_map = floor_map & unexp_map # (H, W)
+            floor_map = out_semmap[0, FLOOR_ID]  # (H, W)
+            unexp_map = ~torch.any(in_semmap[0], dim=0)  # (H, W)
+            unexp_floor_map = floor_map & unexp_map  # (H, W)
             # Identify connected components of unexplored floor space
             unexp_floor_map = unexp_floor_map.cpu().numpy()
             unexp_floor_map = unexp_floor_map.astype(np.uint8) * 255
-            ncomps, comp_labs, _, _ = cv2.connectedComponentsWithStats(
-                unexp_floor_map, 4 , cv2.CV_32S
-            )
+            ncomps, comp_labs, _, _ = cv2.connectedComponentsWithStats(unexp_floor_map, 4, cv2.CV_32S)
             # Only select largest 5 contours
-            largest_contours = sorted(
-                contours, key=lambda cnt: len(cnt), reverse=True
-            )[:5]
+            largest_contours = sorted(contours, key=lambda cnt: len(cnt), reverse=True)[:5]
             contour_stats = [0.0 for _ in range(len(largest_contours))]
             # For each connected component, find the intersecting frontiers and
             # add area to them.
             kernel = np.ones((5, 5))
             for i in range(1, ncomps):
                 comp = (comp_labs == i).astype(np.float32)
-                comp_area = comp.sum().item() * (self.grid_size ** 2)
+                comp_area = comp.sum().item() * (self.grid_size**2)
                 # dilate
                 comp = cv2.dilate(comp, kernel, iterations=1)
                 # intersect with frontiers
@@ -822,7 +805,7 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
                     if intersection > 0:
                         contour_stats[j] += comp_area
             # Create out areas map
-            out_area_pfs = torch.zeros_like(floor_map).float() # (H, W)
+            out_area_pfs = torch.zeros_like(floor_map).float()  # (H, W)
             if hasattr(self.cfg, 'normalize_area_by_constant'):
                 normalize_area_by_constant = self.cfg.normalize_area_by_constant
             else:
@@ -831,18 +814,16 @@ class SemanticMapPrecomputedDataset(SemanticMapDataset):
             if normalize_area_by_constant:
                 total_area = self.cfg.max_unexp_area
             else:
-                total_area = floor_map.sum().item() * (self.grid_size ** 2) / 2.0
+                total_area = floor_map.sum().item() * (self.grid_size**2) / 2.0
             for stat, contour in zip(contour_stats, largest_contours):
                 # Use linear scoring
                 score = np.clip(stat / (total_area + EPS), 0.0, 1.0)
                 for x, y in contour:
                     out_area_pfs[y, x] = score
             # Dilate the area map
-            out_area_pfs = out_area_pfs.unsqueeze(0).unsqueeze(1) # (1, 1, H, W)
-            out_area_pfs = torch.nn.functional.max_pool2d(
-                out_area_pfs, 7, stride=1, padding=3
-            )
-            out_area_pfs = out_area_pfs.squeeze(1) # (1, H, W)
+            out_area_pfs = out_area_pfs.unsqueeze(0).unsqueeze(1)  # (1, 1, H, W)
+            out_area_pfs = torch.nn.functional.max_pool2d(out_area_pfs, 7, stride=1, padding=3)
+            out_area_pfs = out_area_pfs.squeeze(1)  # (1, H, W)
 
         # Remove batch dim
         out_base_masks = out_base_masks.squeeze(0)

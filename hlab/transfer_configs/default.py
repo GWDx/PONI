@@ -122,7 +122,6 @@ _C.NF_EXP_POLICY.mask_nearest_locations = True
 _C.NF_EXP_POLICY.mask_size = 1.0
 ################################################################################
 
-
 _C.register_renamed_key
 
 
@@ -162,11 +161,9 @@ def get_config(
         config.merge_from_list(config.CMD_TRAILING_OPTS)
 
     if config.NUM_PROCESSES != -1:
-        warnings.warn(
-            "NUM_PROCESSES is depricated and will be removed in a future version."
-            "  Use NUM_ENVIRONMENTS instead."
-            "  Overwriting NUM_ENVIRONMENTS with NUM_PROCESSES for backwards compatibility."
-        )
+        warnings.warn("NUM_PROCESSES is depricated and will be removed in a future version."
+                      "  Use NUM_ENVIRONMENTS instead."
+                      "  Overwriting NUM_ENVIRONMENTS with NUM_PROCESSES for backwards compatibility.")
 
         config.NUM_ENVIRONMENTS = config.NUM_PROCESSES
 

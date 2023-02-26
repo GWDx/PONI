@@ -152,9 +152,7 @@ class SemanticMapperModule(nn.Module):
             fpoint = torch.argmax(complex_mask.view(B, N, -1), dim=2)  # (B, N)
             # If no frontier point exists, sample a random point
             # along the predicted direction.
-            no_frontier_mask = torch.all(
-                complex_mask.view(B, N, -1) == 0, dim=2
-            )  # (B, N)
+            no_frontier_mask = torch.all(complex_mask.view(B, N, -1) == 0, dim=2)  # (B, N)
             angle_mask = is_within_angle.view(B * N, H * W)
             spoint = torch.multinomial(angle_mask, 1)  # (B * N, 1)
             spoint = spoint.view(B, N)
@@ -208,14 +206,10 @@ class SemanticMapperModule(nn.Module):
         unk_map_shiftdown = F.pad(unk_map, (0, 0, 1, 0))[:, :-1]
         unk_map_shiftleft = F.pad(unk_map, (0, 1, 0, 0))[:, :, 1:]
         unk_map_shiftright = F.pad(unk_map, (1, 0, 0, 0))[:, :, :-1]
-        frontiers = (
-            (free_map == unk_map_shiftup)
-            | (free_map == unk_map_shiftdown)
-            | (free_map == unk_map_shiftleft)
-            | (free_map == unk_map_shiftright)
-        ) & (
-            free_map == 1
-        )  # (B, H, W)
+        frontiers = ((free_map == unk_map_shiftup)
+                     | (free_map == unk_map_shiftdown)
+                     | (free_map == unk_map_shiftleft)
+                     | (free_map == unk_map_shiftright)) & (free_map == 1)  # (B, H, W)
         # Dilate the frontiers
         frontiers = frontiers.unsqueeze(1).float()  # (B, 1, H, W)
         frontiers = torch.nn.functional.max_pool2d(frontiers, 7, stride=1, padding=3)
@@ -306,9 +300,7 @@ class SemanticMapperModule(nn.Module):
         self.train_dataset = SMPrecompDataset(self.cfg.DATASET, split="train")
         self.train_sampler = None
         if is_distributed:
-            self.train_sampler = torch.utils.data.distributed.DistributedSampler(
-                self.train_dataset
-            )
+            self.train_sampler = torch.utils.data.distributed.DistributedSampler(self.train_dataset)
         self.train_loader = DataLoader(
             self.train_dataset,
             batch_size=self.cfg.OPTIM.batch_size,
@@ -452,9 +444,7 @@ class Trainer:
 
         main_port = int(os.environ.get("MAIN_PORT", self.DEFAULT_PORT))
         if slurm_jobid is not None:
-            main_port += int(slurm_jobid) % int(
-                os.environ.get("MAIN_PORT_RANGE", self.DEFAULT_PORT_RANGE)
-            )
+            main_port += int(slurm_jobid) % int(os.environ.get("MAIN_PORT_RANGE", self.DEFAULT_PORT_RANGE))
         main_addr = os.environ.get("MAIN_ADDR", self.DEFAULT_MAIN_ADDR)
         if self.cfg.LOGGING.verbose:
             print(f"=======> (0) breakpoint reached in proc: {world_rank}")
@@ -463,9 +453,7 @@ class Trainer:
         if self.cfg.LOGGING.verbose:
             print(f"=======> (1) breakpoint reached in proc: {world_rank}")
 
-        distrib.init_process_group(
-            "nccl", store=tcp_store, rank=world_rank, world_size=world_size
-        )
+        distrib.init_process_group("nccl", store=tcp_store, rank=world_rank, world_size=world_size)
         if self.cfg.LOGGING.verbose:
             print(f"=======> (2) breakpoint reached in proc: {world_rank}")
 
@@ -533,9 +521,7 @@ class Trainer:
 
         # Start training
         train_losses = collections.deque(maxlen=200)
-        train_sep_losses = collections.defaultdict(
-            lambda: collections.deque(maxlen=200)
-        )
+        train_sep_losses = collections.defaultdict(lambda: collections.deque(maxlen=200))
         eff_batch_size = cfg.OPTIM.batch_size * self.world_size
         updates_per_epoch = math.ceil(n_train_samples / eff_batch_size)
         num_epochs = math.ceil(cfg.OPTIM.num_total_updates / updates_per_epoch)
@@ -559,12 +545,12 @@ class Trainer:
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
                 curr_step = inputs[list(inputs.keys())[0]].shape[0]
                 for key in [
-                    "object_pfs",
-                    "loss_masks",
-                    "dirs",
-                    "locs",
-                    "area_pfs",
-                    "acts",
+                        "object_pfs",
+                        "loss_masks",
+                        "dirs",
+                        "locs",
+                        "area_pfs",
+                        "acts",
                 ]:
                     if key in labels and labels[key] is not None:
                         labels[key] = labels[key].to(self.device)
@@ -584,13 +570,9 @@ class Trainer:
                 curr_pt_time = time.time() - pt_start_time
                 # ---------------- sum statistics across processes ------------#
                 if self.is_distributed:
-                    curr_stats = torch.Tensor(
-                        [curr_step, curr_dt_time, curr_pt_time]
-                    ).to(self.device)
+                    curr_stats = torch.Tensor([curr_step, curr_dt_time, curr_pt_time]).to(self.device)
                     distrib.all_reduce(curr_stats)
-                    curr_step, curr_dt_time, curr_pt_time = (
-                        curr_stats.cpu().numpy().tolist()
-                    )
+                    curr_step, curr_dt_time, curr_pt_time = (curr_stats.cpu().numpy().tolist())
                 # --------------------- update statistics ---------------------#
                 dt_time += curr_dt_time
                 pt_time += curr_pt_time
@@ -601,28 +583,22 @@ class Trainer:
                     avg_train_loss = np.mean(train_losses).item()
                     lr = self.model.optimizer.param_groups[0]["lr"]
                     self.tb_writer.add_scalar("LR", lr, running_steps)
-                    self.tb_writer.add_scalar(
-                        "train/loss", avg_train_loss, running_steps
-                    )
+                    self.tb_writer.add_scalar("train/loss", avg_train_loss, running_steps)
                     self.tb_writer.add_scalar("train/epochs", epoch, running_steps)
                     for k, v in train_sep_losses.items():
                         avg_v = np.mean(v).item()
                         self.tb_writer.add_scalar(f"train/{k}", avg_v, running_steps)
                     avg_pt_time = pt_time / (batch_id + 1) / 60.0  # minutes
                     avg_dt_time = dt_time / (batch_id + 1) / 60.0  # minutes
-                    self.tb_writer.add_scalar(
-                        "time/pytorch", avg_pt_time, running_steps
-                    )
+                    self.tb_writer.add_scalar("time/pytorch", avg_pt_time, running_steps)
                     self.tb_writer.add_scalar("time/data", avg_dt_time, running_steps)
                     logger.info("=" * 30)
-                    logger.info(
-                        f" Epoch [{epoch:4d}/{num_epochs:4d}] |"
-                        f" Step [{step:6d}/{n_train_samples:6d}] |"
-                        f" Train loss: {avg_train_loss:8.4f} |"
-                        f" LR: {lr:8.4f} |"
-                        f" PTime (min): {avg_pt_time:6.2f} |"
-                        f" DTime (min): {avg_dt_time:6.2f}"
-                    )
+                    logger.info(f" Epoch [{epoch:4d}/{num_epochs:4d}] |"
+                                f" Step [{step:6d}/{n_train_samples:6d}] |"
+                                f" Train loss: {avg_train_loss:8.4f} |"
+                                f" LR: {lr:8.4f} |"
+                                f" PTime (min): {avg_pt_time:6.2f} |"
+                                f" DTime (min): {avg_dt_time:6.2f}")
                     print("======> Complete losses")
                     for k, v in train_sep_losses.items():
                         avg_v = np.mean(v).item()
@@ -641,12 +617,12 @@ class Trainer:
                     for inputs, labels in tqdm.tqdm(val_loader, total=total_batches):
                         inputs = {k: v.to(self.device) for k, v in inputs.items()}
                         for key in [
-                            "object_pfs",
-                            "loss_masks",
-                            "dirs",
-                            "locs",
-                            "area_pfs",
-                            "acts",
+                                "object_pfs",
+                                "loss_masks",
+                                "dirs",
+                                "locs",
+                                "area_pfs",
+                                "acts",
                         ]:
                             if key in labels and labels[key] is not None:
                                 labels[key] = labels[key].to(self.device)

@@ -67,10 +67,7 @@ class PFExp(RL_Policy):
 
     @property
     def needs_dist_maps(self):
-        return (
-            self.cfg.PF_EXP_POLICY.add_agent2loc_distance
-            or self.cfg.PF_EXP_POLICY.add_agent2loc_distance_v2
-        )
+        return (self.cfg.PF_EXP_POLICY.add_agent2loc_distance or self.cfg.PF_EXP_POLICY.add_agent2loc_distance_v2)
 
     @property
     def needs_unexplored_maps(self):

@@ -4,7 +4,6 @@ import json
 import click
 import numpy as np
 
-
 METRICS = ["success", "spl", "distance_to_goal"]
 PM = "\u00B1"  # Plus-minus symbol
 

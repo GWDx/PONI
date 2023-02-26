@@ -5,7 +5,7 @@ def get_l2_distance(x1, x2, y1, y2):
     """
     Computes the L2 distance between two points.
     """
-    return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+    return ((x1 - x2)**2 + (y1 - y2)**2)**0.5
 
 
 def get_rel_pose_change(pos2, pos1):

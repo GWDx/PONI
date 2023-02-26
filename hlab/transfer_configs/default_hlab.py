@@ -4,7 +4,6 @@ from habitat.config.default import _C, CN, CONFIG_FILE_SEPARATOR
 
 from . import hlab_sensors  # Needed to register sensors
 
-
 _C = _C.clone()
 
 # -----------------------------------------------------------------------------

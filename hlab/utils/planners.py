@@ -11,7 +11,6 @@ import skimage
 import utils.pose as pu
 from poni.fmm_planner import FMMPlanner
 
-
 # Define commands
 PLAN_AND_ACT_COMMAND = "plan_and_act"
 REACHABILITY_COMMAND = "get_reachability_map"
@@ -101,9 +100,7 @@ class PlannerActor:
         ]
         start = pu.threshold_poses(start, map_pred.shape)
 
-        self.visited[gx1:gx2, gy1:gy2][
-            start[0] - 0 : start[0] + 1, start[1] - 0 : start[1] + 1
-        ] = 1
+        self.visited[gx1:gx2, gy1:gy2][start[0] - 0:start[0] + 1, start[1] - 0:start[1] + 1] = 1
 
         # Collision check
         self.last_action_collision = False
@@ -128,18 +125,12 @@ class PlannerActor:
                 width = self.col_width
                 for i in range(length):
                     for j in range(width):
-                        wx = x1 + 0.05 * (
-                            (i + buf) * np.cos(np.deg2rad(t1))
-                            + (j - width // 2) * np.sin(np.deg2rad(t1))
-                        )
-                        wy = y1 + 0.05 * (
-                            (i + buf) * np.sin(np.deg2rad(t1))
-                            - (j - width // 2) * np.cos(np.deg2rad(t1))
-                        )
+                        wx = x1 + 0.05 * ((i + buf) * np.cos(np.deg2rad(t1)) +
+                                          (j - width // 2) * np.sin(np.deg2rad(t1)))
+                        wy = y1 + 0.05 * ((i + buf) * np.sin(np.deg2rad(t1)) -
+                                          (j - width // 2) * np.cos(np.deg2rad(t1)))
                         r, c = wy, wx
-                        r, c = int(r * 100 / cfg.map_resolution), int(
-                            c * 100 / cfg.map_resolution
-                        )
+                        r, c = int(r * 100 / cfg.map_resolution), int(c * 100 / cfg.map_resolution)
                         [r, c] = pu.threshold_poses([r, c], self.collision_map.shape)
                         self.collision_map[r, c] = 1
 
@@ -151,26 +142,14 @@ class PlannerActor:
         )
 
         # Deterministic Local Policy
-        if (
-            self.cfg.move_as_close_as_possible
-            and self.is_close_to_goal
-            and (
-                stop
-                or self.last_action_collision
-                or replan
-                or self.is_close_time >= self.cfg.move_close_limit
-            )
-        ):
+        if (self.cfg.move_as_close_as_possible and self.is_close_to_goal
+                and (stop or self.last_action_collision or replan or self.is_close_time >= self.cfg.move_close_limit)):
             if self.is_close_time >= self.cfg.move_close_limit:
                 print("=====> Unable to reach closer. Reached time limit.")
             else:
                 print("======> Reached as close as possible")
             action = cfg.ACTION.stop
-        elif (
-            (not self.cfg.move_as_close_as_possible)
-            and stop
-            and planner_inputs["found_goal"] == 1
-        ):
+        elif ((not self.cfg.move_as_close_as_possible) and stop and planner_inputs["found_goal"] == 1):
             action = cfg.ACTION.stop
         else:
             (stg_x, stg_y) = stg
@@ -227,10 +206,8 @@ class PlannerActor:
         traversible[self.visited[gx1:gx2, gy1:gy2][x1:x2, y1:y2] == 1] = 1
 
         s = self.cfg.stg_downsampling
-        traversible[
-            int(start[0] - x1) - s : int(start[0] - x1) + s + 1,
-            int(start[1] - y1) - s : int(start[1] - y1) + s + 1,
-        ] = 1
+        traversible[int(start[0] - x1) - s:int(start[0] - x1) + s + 1,
+                    int(start[1] - y1) - s:int(start[1] - y1) + s + 1, ] = 1
 
         traversible = self.add_boundary(traversible)
         goal = self.add_boundary(goal, value=0)
@@ -284,7 +261,7 @@ class PlannerActor:
 
             if stg_x is None:
                 # Pick some arbitrary location as the short-term goal
-                random_theta = np.random.uniform(-np.pi, np.pi, (1,))[0].item()
+                random_theta = np.random.uniform(-np.pi, np.pi, (1, ))[0].item()
                 stg_x = int(step_size * np.cos(random_theta))
                 stg_y = int(step_size * np.sin(random_theta))
                 replan = True
@@ -297,7 +274,7 @@ class PlannerActor:
     def add_boundary(self, mat, value=1):
         h, w = mat.shape
         new_mat = np.zeros((h + 2, w + 2)) + value
-        new_mat[1 : h + 1, 1 : w + 1] = mat
+        new_mat[1:h + 1, 1:w + 1] = mat
         return new_mat
 
     def get_reachability_map(self, planner_inputs):
@@ -329,11 +306,9 @@ class PlannerActor:
         start = pu.threshold_poses(start, map_pred.shape)
         # Create a goal map (start is goal)
         goal_map = np.zeros(map_pred.shape)
-        goal_map[start[0] - 0 : start[0] + 1, start[1] - 0 : start[1] + 1] = 1
+        goal_map[start[0] - 0:start[0] + 1, start[1] - 0:start[1] + 1] = 1
         # Figure out reachable locations
-        reachability, fmm_dist = self._get_reachability(
-            map_pred, goal_map, planning_window
-        )
+        reachability, fmm_dist = self._get_reachability(map_pred, goal_map, planning_window)
 
         return reachability, fmm_dist
 
@@ -387,31 +362,17 @@ class PlannerActor:
         free_map = cv2.morphologyEx(free_map, cv2.MORPH_CLOSE, kernel)
         unk_map[free_map == 1] = 0
         # https://github.com/facebookresearch/exploring_exploration/blob/09d3f9b8703162fcc0974989e60f8cd5b47d4d39/exploring_exploration/models/frontier_agent.py#L132
-        unk_map_shiftup = np.pad(
-            unk_map, ((0, 1), (0, 0)), mode="constant", constant_values=0
-        )[1:, :]
-        unk_map_shiftdown = np.pad(
-            unk_map, ((1, 0), (0, 0)), mode="constant", constant_values=0
-        )[:-1, :]
-        unk_map_shiftleft = np.pad(
-            unk_map, ((0, 0), (0, 1)), mode="constant", constant_values=0
-        )[:, 1:]
-        unk_map_shiftright = np.pad(
-            unk_map, ((0, 0), (1, 0)), mode="constant", constant_values=0
-        )[:, :-1]
-        frontiers = (
-            (free_map == unk_map_shiftup)
-            | (free_map == unk_map_shiftdown)
-            | (free_map == unk_map_shiftleft)
-            | (free_map == unk_map_shiftright)
-        ) & (
-            free_map == 1
-        )  # (H, W)
+        unk_map_shiftup = np.pad(unk_map, ((0, 1), (0, 0)), mode="constant", constant_values=0)[1:, :]
+        unk_map_shiftdown = np.pad(unk_map, ((1, 0), (0, 0)), mode="constant", constant_values=0)[:-1, :]
+        unk_map_shiftleft = np.pad(unk_map, ((0, 0), (0, 1)), mode="constant", constant_values=0)[:, 1:]
+        unk_map_shiftright = np.pad(unk_map, ((0, 0), (1, 0)), mode="constant", constant_values=0)[:, :-1]
+        frontiers = ((free_map == unk_map_shiftup)
+                     | (free_map == unk_map_shiftdown)
+                     | (free_map == unk_map_shiftleft)
+                     | (free_map == unk_map_shiftright)) & (free_map == 1)  # (H, W)
         frontiers = frontiers.astype(np.uint8)
         # Select only large-enough frontiers
-        contours, _ = cv2.findContours(
-            frontiers, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
-        )
+        contours, _ = cv2.findContours(frontiers, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         if len(contours) > 0:
             contours = [c[:, 0].tolist() for c in contours]  # Clean format
             new_frontiers = np.zeros_like(frontiers)
@@ -436,10 +397,7 @@ class PlannerActor:
         start = pu.threshold_poses(start, frontiers.shape)
         ## Mask out a 100.0 x 100.0 cm region center on the agent
         ncells = int(100.0 / cfg.map_resolution)
-        frontiers[
-            (start[0] - ncells) : (start[0] + ncells + 1),
-            (start[1] - ncells) : (start[1] + ncells + 1),
-        ] = False
+        frontiers[(start[0] - ncells):(start[0] + ncells + 1), (start[1] - ncells):(start[1] + ncells + 1), ] = False
         # Handle edge case where frontier becomes zero
         if not np.any(frontiers):
             # Set a random location to True
@@ -489,9 +447,7 @@ class PlannerActorVector(object):
         self.remotes, self.work_remotes = zip(*[Pipe() for _ in range(n_planners)])
         self.ps = [
             Process(target=worker, args=(work_remote, remote, cfg, worker_id))
-            for (work_remote, remote, worker_id) in zip(
-                self.work_remotes, self.remotes, range(n_planners)
-            )
+            for (work_remote, remote, worker_id) in zip(self.work_remotes, self.remotes, range(n_planners))
         ]
         for p in self.ps:
             p.daemon = True
@@ -538,9 +494,7 @@ class PlannerActorVector(object):
             remote.send((CLOSE_COMMAND, None))
 
     def _assert_not_closed(self):
-        assert (
-            not self.closed
-        ), "Trying to operate on an PlannerActorVector after calling close()"
+        assert (not self.closed), "Trying to operate on an PlannerActorVector after calling close()"
 
 
 def worker_fn(planner, cmd, data):
@@ -577,10 +531,7 @@ class PlannerActorSequential(object):
 
     def call(self, command, inputs, masks):
         self._assert_not_closed()
-        results = [
-            worker_fn(planner, command, (inp, mask))
-            for planner, inp, mask in zip(self.planners, inputs, masks)
-        ]
+        results = [worker_fn(planner, command, (inp, mask)) for planner, inp, mask in zip(self.planners, inputs, masks)]
         return results
 
     def plan_and_act(self, planner_inputs_all, masks):
@@ -606,6 +557,4 @@ class PlannerActorSequential(object):
         self.closed = True
 
     def _assert_not_closed(self):
-        assert (
-            not self.closed
-        ), "Trying to operate on an PlannerActorVector after calling close()"
+        assert (not self.closed), "Trying to operate on an PlannerActorVector after calling close()"

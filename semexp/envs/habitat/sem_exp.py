@@ -25,21 +25,16 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
     object is used for each environment thread.
 
     """
-
     def __init__(self, args, rank, config_env, dataset):
 
         self.args = args
         super().__init__(args, rank, config_env, dataset)
 
         # initialize transform for RGB observations
-        self.res = transforms.Compose(
-            [
-                transforms.ToPILImage(),
-                transforms.Resize(
-                    (args.frame_height, args.frame_width), interpolation=Image.NEAREST
-                ),
-            ]
-        )
+        self.res = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((args.frame_height, args.frame_width), interpolation=Image.NEAREST),
+        ])
 
         # initialize semantic segmentation prediction model
         if args.sem_gpu_id == -1:
@@ -78,9 +73,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
 
         obs, info = super().reset()
         obs = self._preprocess_obs(obs)
-        self.starting_map_loc_and_ort = self.sim_continuous_to_sim_map(
-            self.get_sim_location()
-        )
+        self.starting_map_loc_and_ort = self.sim_continuous_to_sim_map(self.get_sim_location())
 
         self.obs_shape = obs.shape
 
@@ -251,11 +244,9 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         start = pu.threshold_poses(start, map_pred.shape)
         # Create a goal map (start is goal)
         goal_map = np.zeros(map_pred.shape)
-        goal_map[start[0] - 0 : start[0] + 1, start[1] - 0 : start[1] + 1] = 1
+        goal_map[start[0] - 0:start[0] + 1, start[1] - 0:start[1] + 1] = 1
         # Figure out reachable locations
-        reachability, fmm_dist = self._get_reachability(
-            map_pred, goal_map, planning_window
-        )
+        reachability, fmm_dist = self._get_reachability(map_pred, goal_map, planning_window)
         planning_time = time.time() - start_time
 
         return reachability, fmm_dist
@@ -284,31 +275,17 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         free_map = cv2.morphologyEx(free_map, cv2.MORPH_CLOSE, kernel)
         unk_map[free_map == 1] = 0
         # https://github.com/facebookresearch/exploring_exploration/blob/09d3f9b8703162fcc0974989e60f8cd5b47d4d39/exploring_exploration/models/frontier_agent.py#L132
-        unk_map_shiftup = np.pad(
-            unk_map, ((0, 1), (0, 0)), mode="constant", constant_values=0
-        )[1:, :]
-        unk_map_shiftdown = np.pad(
-            unk_map, ((1, 0), (0, 0)), mode="constant", constant_values=0
-        )[:-1, :]
-        unk_map_shiftleft = np.pad(
-            unk_map, ((0, 0), (0, 1)), mode="constant", constant_values=0
-        )[:, 1:]
-        unk_map_shiftright = np.pad(
-            unk_map, ((0, 0), (1, 0)), mode="constant", constant_values=0
-        )[:, :-1]
-        frontiers = (
-            (free_map == unk_map_shiftup)
-            | (free_map == unk_map_shiftdown)
-            | (free_map == unk_map_shiftleft)
-            | (free_map == unk_map_shiftright)
-        ) & (
-            free_map == 1
-        )  # (H, W)
+        unk_map_shiftup = np.pad(unk_map, ((0, 1), (0, 0)), mode="constant", constant_values=0)[1:, :]
+        unk_map_shiftdown = np.pad(unk_map, ((1, 0), (0, 0)), mode="constant", constant_values=0)[:-1, :]
+        unk_map_shiftleft = np.pad(unk_map, ((0, 0), (0, 1)), mode="constant", constant_values=0)[:, 1:]
+        unk_map_shiftright = np.pad(unk_map, ((0, 0), (1, 0)), mode="constant", constant_values=0)[:, :-1]
+        frontiers = ((free_map == unk_map_shiftup)
+                     | (free_map == unk_map_shiftdown)
+                     | (free_map == unk_map_shiftleft)
+                     | (free_map == unk_map_shiftright)) & (free_map == 1)  # (H, W)
         frontiers = frontiers.astype(np.uint8)
         # Select only large-enough frontiers
-        contours, _ = cv2.findContours(
-            frontiers, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
-        )
+        contours, _ = cv2.findContours(frontiers, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         if len(contours) > 0:
             contours = [c[:, 0].tolist() for c in contours]  # Clean format
             new_frontiers = np.zeros_like(frontiers)
@@ -333,10 +310,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         start = pu.threshold_poses(start, frontiers.shape)
         ## Mask out a 100.0 x 100.0 cm region center on the agent
         ncells = int(100.0 / args.map_resolution)
-        frontiers[
-            (start[0] - ncells) : (start[0] + ncells + 1),
-            (start[1] - ncells) : (start[1] + ncells + 1),
-        ] = False
+        frontiers[(start[0] - ncells):(start[0] + ncells + 1), (start[1] - ncells):(start[1] + ncells + 1), ] = False
         # Handle edge case where frontier becomes zero
         if not np.any(frontiers):
             # Set a random location to True
@@ -372,9 +346,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         traversible = pred_map[0]
         planner = FMMPlanner(traversible)
         # Get FMM dists to each category
-        selem = skimage.morphology.disk(
-            int(self.object_boundary / 4.0 * 100.0 / self.args.map_resolution)
-        )
+        selem = skimage.morphology.disk(int(self.object_boundary / 4.0 * 100.0 / self.args.map_resolution))
         for i in range(1, fmm_dists.shape[0]):
             if np.count_nonzero(pred_map[i]) == 0:
                 continue
@@ -422,9 +394,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         ]
         start = pu.threshold_poses(start, map_pred.shape)
 
-        self.visited[gx1:gx2, gy1:gy2][
-            start[0] - 0 : start[0] + 1, start[1] - 0 : start[1] + 1
-        ] = 1
+        self.visited[gx1:gx2, gy1:gy2][start[0] - 0:start[0] + 1, start[1] - 0:start[1] + 1] = 1
 
         if args.visualize or args.print_images:
             # Get last loc
@@ -435,9 +405,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
                 int(c * 100.0 / args.map_resolution - gy1),
             ]
             last_start = pu.threshold_poses(last_start, map_pred.shape)
-            self.visited_vis[gx1:gx2, gy1:gy2] = vu.draw_line(
-                last_start, start, self.visited_vis[gx1:gx2, gy1:gy2]
-            )
+            self.visited_vis[gx1:gx2, gy1:gy2] = vu.draw_line(last_start, start, self.visited_vis[gx1:gx2, gy1:gy2])
 
         # Collision check
         if self.last_action == 1:
@@ -460,18 +428,12 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
                 width = self.col_width
                 for i in range(length):
                     for j in range(width):
-                        wx = x1 + 0.05 * (
-                            (i + buf) * np.cos(np.deg2rad(t1))
-                            + (j - width // 2) * np.sin(np.deg2rad(t1))
-                        )
-                        wy = y1 + 0.05 * (
-                            (i + buf) * np.sin(np.deg2rad(t1))
-                            - (j - width // 2) * np.cos(np.deg2rad(t1))
-                        )
+                        wx = x1 + 0.05 * ((i + buf) * np.cos(np.deg2rad(t1)) +
+                                          (j - width // 2) * np.sin(np.deg2rad(t1)))
+                        wy = y1 + 0.05 * ((i + buf) * np.sin(np.deg2rad(t1)) -
+                                          (j - width // 2) * np.cos(np.deg2rad(t1)))
                         r, c = wy, wx
-                        r, c = int(r * 100 / args.map_resolution), int(
-                            c * 100 / args.map_resolution
-                        )
+                        r, c = int(r * 100 / args.map_resolution), int(c * 100 / args.map_resolution)
                         [r, c] = pu.threshold_poses([r, c], self.collision_map.shape)
                         self.collision_map[r, c] = 1
 
@@ -503,7 +465,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
     def add_boundary(self, mat, value=1):
         h, w = mat.shape
         new_mat = np.zeros((h + 2, w + 2)) + value
-        new_mat[1 : h + 1, 1 : w + 1] = mat
+        new_mat[1:h + 1, 1:w + 1] = mat
         return new_mat
 
     def _get_stg(self, grid, start, goal, planning_window):
@@ -521,10 +483,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         traversible[self.collision_map[gx1:gx2, gy1:gy2][x1:x2, y1:y2] == 1] = 0
         traversible[self.visited[gx1:gx2, gy1:gy2][x1:x2, y1:y2] == 1] = 1
 
-        traversible[
-            int(start[0] - x1) - 1 : int(start[0] - x1) + 2,
-            int(start[1] - y1) - 1 : int(start[1] - y1) + 2,
-        ] = 1
+        traversible[int(start[0] - x1) - 1:int(start[0] - x1) + 2, int(start[1] - y1) - 1:int(start[1] - y1) + 2, ] = 1
 
         traversible = self.add_boundary(traversible)
         goal = self.add_boundary(goal, value=0)
@@ -621,8 +580,8 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         ds = args.env_frame_width // args.frame_width  # Downscaling factor
         if ds != 1:
             rgb = np.asarray(self.res(rgb.astype(np.uint8)))
-            depth = depth[ds // 2 :: ds, ds // 2 :: ds]
-            sem_seg_pred = sem_seg_pred[ds // 2 :: ds, ds // 2 :: ds]
+            depth = depth[ds // 2::ds, ds // 2::ds]
+            sem_seg_pred = sem_seg_pred[ds // 2::ds, ds // 2::ds]
 
         depth = np.expand_dims(depth, axis=2)
         state = np.concatenate((rgb, depth, sem_seg_pred), axis=2).transpose(2, 0, 1)
@@ -708,9 +667,7 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         sem_map_vis = np.flipud(sem_map_vis)
 
         sem_map_vis = sem_map_vis[:, :, [2, 1, 0]]
-        sem_map_vis = cv2.resize(
-            sem_map_vis, (480, 480), interpolation=cv2.INTER_NEAREST
-        )
+        sem_map_vis = cv2.resize(sem_map_vis, (480, 480), interpolation=cv2.INTER_NEAREST)
 
         sem_seg_vis = Image.new("P", (sem_seg.shape[1], sem_seg.shape[0]))
         sem_seg_vis.putpalette(color_pal)
@@ -719,18 +676,14 @@ class Sem_Exp_Env_Agent(MultiObjectGoal_Env):
         sem_seg_vis = np.array(sem_seg_vis)
 
         sem_seg_vis = sem_seg_vis[:, :, [2, 1, 0]]
-        sem_seg_vis = cv2.resize(
-            sem_seg_vis, (640, 480), interpolation=cv2.INTER_NEAREST
-        )
+        sem_seg_vis = cv2.resize(sem_seg_vis, (640, 480), interpolation=cv2.INTER_NEAREST)
         self.vis_image[50:530, 15:655] = self.rgb_vis
         self.vis_image[50:530, 670:1150] = sem_map_vis
         self.vis_image[50:530, 1165:1805] = sem_seg_vis
 
         pos = (
             (start_x * 100.0 / args.map_resolution - gy1) * 480 / map_pred.shape[0],
-            (map_pred.shape[1] - start_y * 100.0 / args.map_resolution + gx1)
-            * 480
-            / map_pred.shape[1],
+            (map_pred.shape[1] - start_y * 100.0 / args.map_resolution + gx1) * 480 / map_pred.shape[1],
             np.deg2rad(-start_o),
         )
 

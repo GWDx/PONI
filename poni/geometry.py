@@ -74,48 +74,26 @@ def crop_map(h, x, crop_size, mode="bilinear"):
     Wby2 = (W - 1) / 2 if W % 2 == 1 else W // 2
     start = -(crop_size - 1) / 2 if crop_size % 2 == 1 else -(crop_size // 2)
     end = start + crop_size - 1
-    x_grid = (
-        torch.arange(start, end + 1, step=1)
-        .unsqueeze(0)
-        .expand(crop_size, -1)
-        .contiguous()
-        .float()
-    )
-    y_grid = (
-        torch.arange(start, end + 1, step=1)
-        .unsqueeze(1)
-        .expand(-1, crop_size)
-        .contiguous()
-        .float()
-    )
-    center_grid = torch.stack([x_grid, y_grid], dim=2).to(
-        h.device
-    )  # (crop_size, crop_size, 2)
+    x_grid = (torch.arange(start, end + 1, step=1).unsqueeze(0).expand(crop_size, -1).contiguous().float())
+    y_grid = (torch.arange(start, end + 1, step=1).unsqueeze(1).expand(-1, crop_size).contiguous().float())
+    center_grid = torch.stack([x_grid, y_grid], dim=2).to(h.device)  # (crop_size, crop_size, 2)
 
     x_pos = x[:, 0] - Wby2  # (bs, )
     y_pos = x[:, 1] - Hby2  # (bs, )
 
-    crop_grid = center_grid.unsqueeze(0).expand(
-        bs, -1, -1, -1
-    )  # (bs, crop_size, crop_size, 2)
+    crop_grid = center_grid.unsqueeze(0).expand(bs, -1, -1, -1)  # (bs, crop_size, crop_size, 2)
     crop_grid = crop_grid.contiguous()
 
     # Convert the grid to (-1, 1) range
-    crop_grid[:, :, :, 0] = (
-        crop_grid[:, :, :, 0] + x_pos.unsqueeze(1).unsqueeze(2)
-    ) / Wby2
-    crop_grid[:, :, :, 1] = (
-        crop_grid[:, :, :, 1] + y_pos.unsqueeze(1).unsqueeze(2)
-    ) / Hby2
+    crop_grid[:, :, :, 0] = (crop_grid[:, :, :, 0] + x_pos.unsqueeze(1).unsqueeze(2)) / Wby2
+    crop_grid[:, :, :, 1] = (crop_grid[:, :, :, 1] + y_pos.unsqueeze(1).unsqueeze(2)) / Hby2
 
     h_cropped = F.grid_sample(h, crop_grid, mode=mode, align_corners=False)
 
     return h_cropped
 
 
-def crop_map_with_pad(
-    h, x, crop_size, mode="bilinear", pad_mode="constant", pad_value=0
-):
+def crop_map_with_pad(h, x, crop_size, mode="bilinear", pad_mode="constant", pad_value=0):
     """
     Crops a tensor h centered around location x with size crop_size
     Inputs:
@@ -184,25 +162,13 @@ def get_frontiers_np(unexp_map: np.array, free_map: np.array):
     Outputs:
         frontiers - (H, W) boolean numpy array
     """
-    unexp_map_shiftup = np.pad(
-        unexp_map, ((0, 1), (0, 0)), mode="constant", constant_values=0
-    )[1:, :]
-    unexp_map_shiftdown = np.pad(
-        unexp_map, ((1, 0), (0, 0)), mode="constant", constant_values=0
-    )[:-1, :]
-    unexp_map_shiftleft = np.pad(
-        unexp_map, ((0, 0), (0, 1)), mode="constant", constant_values=0
-    )[:, 1:]
-    unexp_map_shiftright = np.pad(
-        unexp_map, ((0, 0), (1, 0)), mode="constant", constant_values=0
-    )[:, :-1]
-    frontiers = (
-        (free_map == unexp_map_shiftup)
-        | (free_map == unexp_map_shiftdown)
-        | (free_map == unexp_map_shiftleft)
-        | (free_map == unexp_map_shiftright)
-    ) & (
-        free_map == 1
-    )  # (H, W)
+    unexp_map_shiftup = np.pad(unexp_map, ((0, 1), (0, 0)), mode="constant", constant_values=0)[1:, :]
+    unexp_map_shiftdown = np.pad(unexp_map, ((1, 0), (0, 0)), mode="constant", constant_values=0)[:-1, :]
+    unexp_map_shiftleft = np.pad(unexp_map, ((0, 0), (0, 1)), mode="constant", constant_values=0)[:, 1:]
+    unexp_map_shiftright = np.pad(unexp_map, ((0, 0), (1, 0)), mode="constant", constant_values=0)[:, :-1]
+    frontiers = ((free_map == unexp_map_shiftup)
+                 | (free_map == unexp_map_shiftdown)
+                 | (free_map == unexp_map_shiftleft)
+                 | (free_map == unexp_map_shiftright)) & (free_map == 1)  # (H, W)
 
     return frontiers

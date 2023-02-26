@@ -11,13 +11,8 @@ def get_mask(sx, sy, scale, step_size):
     mask = np.zeros((size, size))
     for i in range(size):
         for j in range(size):
-            if ((i + 0.5) - (size // 2 + sx)) ** 2 + (
-                (j + 0.5) - (size // 2 + sy)
-            ) ** 2 <= step_size**2 and ((i + 0.5) - (size // 2 + sx)) ** 2 + (
-                (j + 0.5) - (size // 2 + sy)
-            ) ** 2 > (
-                step_size - 1
-            ) ** 2:
+            if ((i + 0.5) - (size // 2 + sx))**2 + ((j + 0.5) - (size // 2 + sy))**2 <= step_size**2 and (
+                (i + 0.5) - (size // 2 + sx))**2 + ((j + 0.5) - (size // 2 + sy))**2 > (step_size - 1)**2:
                 mask[i, j] = 1
 
     mask[size // 2, size // 2] = 1
@@ -30,16 +25,10 @@ def get_dist(sx, sy, scale, step_size):
     mask = np.zeros((size, size)) + 1e-10
     for i in range(size):
         for j in range(size):
-            if ((i + 0.5) - (size // 2 + sx)) ** 2 + (
-                (j + 0.5) - (size // 2 + sy)
-            ) ** 2 <= step_size**2:
+            if ((i + 0.5) - (size // 2 + sx))**2 + ((j + 0.5) - (size // 2 + sy))**2 <= step_size**2:
                 mask[i, j] = max(
                     5,
-                    (
-                        ((i + 0.5) - (size // 2 + sx)) ** 2
-                        + ((j + 0.5) - (size // 2 + sy)) ** 2
-                    )
-                    ** 0.5,
+                    (((i + 0.5) - (size // 2 + sx))**2 + ((j + 0.5) - (size // 2 + sy))**2)**0.5,
                 )
     return mask
 
@@ -63,9 +52,7 @@ class FMMPlanner:
 
     def set_goal(self, goal, auto_improve=False):
         traversible_ma = ma.masked_values(self.traversible * 1, 0)
-        goal_x, goal_y = int(goal[0] / (self.scale * 1.0)), int(
-            goal[1] / (self.scale * 1.0)
-        )
+        goal_x, goal_y = int(goal[0] / (self.scale * 1.0)), int(goal[1] / (self.scale * 1.0))
 
         if self.traversible[goal_x, goal_y] == 0.0 and auto_improve:
             goal_x, goal_y = self._find_nearest_goal([goal_x, goal_y])
@@ -119,18 +106,16 @@ class FMMPlanner:
             self.fmm_dist,
             self.du,
             "constant",
-            constant_values=self.fmm_dist.shape[0] ** 2,
+            constant_values=self.fmm_dist.shape[0]**2,
         )
-        subset = dist[
-            state[0] : state[0] + 2 * self.du + 1, state[1] : state[1] + 2 * self.du + 1
-        ]
+        subset = dist[state[0]:state[0] + 2 * self.du + 1, state[1]:state[1] + 2 * self.du + 1]
 
-        assert (
-            subset.shape[0] == 2 * self.du + 1 and subset.shape[1] == 2 * self.du + 1
-        ), "Planning error: unexpected subset shape {}".format(subset.shape)
+        assert (subset.shape[0] == 2 * self.du + 1
+                and subset.shape[1] == 2 * self.du + 1), "Planning error: unexpected subset shape {}".format(
+                    subset.shape)
 
         subset *= mask
-        subset += (1 - mask) * self.fmm_dist.shape[0] ** 2
+        subset += (1 - mask) * self.fmm_dist.shape[0]**2
 
         if subset[self.du, self.du] < dthresh * 100 / 5.0:  # 25cm
             stop = True
@@ -156,12 +141,8 @@ class FMMPlanner:
         )
 
     def _find_nearest_goal(self, goal):
-        traversible = (
-            skimage.morphology.binary_dilation(
-                np.zeros(self.traversible.shape), skimage.morphology.disk(2)
-            )
-            != True
-        )
+        traversible = (skimage.morphology.binary_dilation(np.zeros(self.traversible.shape), skimage.morphology.disk(2))
+                       != True)
         traversible = traversible * 1.0
         planner = FMMPlanner(traversible)
         planner.set_goal(goal)

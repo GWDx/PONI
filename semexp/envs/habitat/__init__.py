@@ -21,13 +21,9 @@ def make_env_fn(args, config_env, rank):
     config_env.freeze()
 
     if args.agent == "sem_exp":
-        env = Sem_Exp_Env_Agent(
-            args=args, rank=rank, config_env=config_env, dataset=dataset
-        )
+        env = Sem_Exp_Env_Agent(args=args, rank=rank, config_env=config_env, dataset=dataset)
     else:
-        env = MultiObjectGoal_Env(
-            args=args, rank=rank, config_env=config_env, dataset=dataset
-        )
+        env = MultiObjectGoal_Env(args=args, rank=rank, config_env=config_env, dataset=dataset)
 
     env.seed(rank + args.seed)
     return env
@@ -38,7 +34,7 @@ def _get_scenes_from_folder(content_dir):
     scenes = []
     for filename in os.listdir(content_dir):
         if filename.endswith(scene_dataset_ext):
-            scene = filename[: -len(scene_dataset_ext) + 4]
+            scene = filename[:-len(scene_dataset_ext) + 4]
             scenes.append(scene)
     scenes.sort()
     return scenes
@@ -51,31 +47,21 @@ def construct_envs(args, workers_ignore_signals: bool = False, use_list_env=Fals
     basic_config = cfg_env(config_paths=["envs/habitat/configs/" + args.task_config])
     basic_config.defrost()
     basic_config.DATASET.SPLIT = args.split
-    basic_config.DATASET.DATA_PATH = basic_config.DATASET.DATA_PATH.replace(
-        "v1", args.version
-    )
-    basic_config.DATASET.EPISODES_DIR = basic_config.DATASET.EPISODES_DIR.replace(
-        "v1", args.version
-    )
+    basic_config.DATASET.DATA_PATH = basic_config.DATASET.DATA_PATH.replace("v1", args.version)
+    basic_config.DATASET.EPISODES_DIR = basic_config.DATASET.EPISODES_DIR.replace("v1", args.version)
     basic_config.SEED = args.seed
     basic_config.freeze()
 
     scenes = basic_config.DATASET.CONTENT_SCENES
     if "*" in basic_config.DATASET.CONTENT_SCENES:
-        content_dir = os.path.join(
-            basic_config.DATASET.EPISODES_DIR.format(split=args.split), "content"
-        )
+        content_dir = os.path.join(basic_config.DATASET.EPISODES_DIR.format(split=args.split), "content")
         scenes = _get_scenes_from_folder(content_dir)
 
     if len(scenes) > 0:
-        assert len(scenes) >= args.num_processes, (
-            "reduce the number of processes as there " "aren't enough number of scenes"
-        )
+        assert len(scenes) >= args.num_processes, ("reduce the number of processes as there "
+                                                   "aren't enough number of scenes")
 
-        scene_split_sizes = [
-            int(np.floor(len(scenes) / args.num_processes))
-            for _ in range(args.num_processes)
-        ]
+        scene_split_sizes = [int(np.floor(len(scenes) / args.num_processes)) for _ in range(args.num_processes)]
         for i in range(len(scenes) % args.num_processes):
             scene_split_sizes[i] += 1
 
@@ -85,18 +71,13 @@ def construct_envs(args, workers_ignore_signals: bool = False, use_list_env=Fals
         config_env.defrost()
 
         if len(scenes) > 0:
-            config_env.DATASET.CONTENT_SCENES = scenes[
-                sum(scene_split_sizes[:i]) : sum(scene_split_sizes[: i + 1])
-            ]
+            config_env.DATASET.CONTENT_SCENES = scenes[sum(scene_split_sizes[:i]):sum(scene_split_sizes[:i + 1])]
             print("Thread {}: {}".format(i, config_env.DATASET.CONTENT_SCENES))
 
         if i < args.num_processes_on_first_gpu:
             gpu_id = 0
         else:
-            gpu_id = (
-                int((i - args.num_processes_on_first_gpu) // args.num_processes_per_gpu)
-                + args.sim_gpu_id
-            )
+            gpu_id = (int((i - args.num_processes_on_first_gpu) // args.num_processes_per_gpu) + args.sim_gpu_id)
         gpu_id = min(torch.cuda.device_count() - 1, gpu_id)
         config_env.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = gpu_id
 
@@ -131,12 +112,8 @@ def construct_envs(args, workers_ignore_signals: bool = False, use_list_env=Fals
 
         config_env.SIMULATOR.TURN_ANGLE = args.turn_angle
         config_env.DATASET.SPLIT = args.split
-        config_env.DATASET.DATA_PATH = config_env.DATASET.DATA_PATH.replace(
-            "v1", args.version
-        )
-        config_env.DATASET.EPISODES_DIR = config_env.DATASET.EPISODES_DIR.replace(
-            "v1", args.version
-        )
+        config_env.DATASET.DATA_PATH = config_env.DATASET.DATA_PATH.replace("v1", args.version)
+        config_env.DATASET.EPISODES_DIR = config_env.DATASET.EPISODES_DIR.replace("v1", args.version)
 
         config_env.freeze()
         env_configs.append(config_env)
@@ -146,17 +123,13 @@ def construct_envs(args, workers_ignore_signals: bool = False, use_list_env=Fals
     if not use_list_env:
         envs = VectorEnv(
             make_env_fn=make_env_fn,
-            env_fn_args=tuple(
-                tuple(zip(args_list, env_configs, range(args.num_processes)))
-            ),
+            env_fn_args=tuple(tuple(zip(args_list, env_configs, range(args.num_processes)))),
             workers_ignore_signals=workers_ignore_signals,
         )
     else:
         envs = ListEnv(
             make_env_fn=make_env_fn,
-            env_fn_args=tuple(
-                tuple(zip(args_list, env_configs, range(args.num_processes)))
-            ),
+            env_fn_args=tuple(tuple(zip(args_list, env_configs, range(args.num_processes)))),
         )
 
     return envs

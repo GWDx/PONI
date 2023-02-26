@@ -20,9 +20,7 @@ class Potential_Function_Semantic_Policy(nn.Module):
         pf_model_cfg.merge_from_other_cfg(loaded_state["cfg"])
         self.pf_model = PFModel(pf_model_cfg)
         # Remove dataparallel modules
-        state_dict = {
-            k.replace(".module", ""): v for k, v in loaded_state["state_dict"].items()
-        }
+        state_dict = {k.replace(".module", ""): v for k, v in loaded_state["state_dict"].items()}
         self.pf_model.load_state_dict(state_dict)
         self.eval()
 
@@ -76,9 +74,7 @@ class RL_Policy(nn.Module):
         output_type = "map"
         if hasattr(cfg.MODEL, "output_type"):
             output_type = cfg.MODEL.output_type
-        return (
-            output_type in ["dirs", "locs", "acts"]
-        ) or self.args.use_egocentric_transform
+        return (output_type in ["dirs", "locs", "acts"]) or self.args.use_egocentric_transform
 
     @property
     def has_action_output(self):
@@ -91,9 +87,7 @@ class RL_Policy(nn.Module):
     def forward(self, inputs, rnn_hxs, masks, extras):
         raise NotImplementedError
 
-    def act(
-        self, inputs, rnn_hxs, masks, extras=None, extra_maps=None, deterministic=False
-    ):
+    def act(self, inputs, rnn_hxs, masks, extras=None, extra_maps=None, deterministic=False):
 
         assert extra_maps is not None
         value = torch.zeros(inputs.shape[0], device=inputs.device)
@@ -129,10 +123,7 @@ class RL_Policy(nn.Module):
 
         if self.has_action_output:
             goal_cat_id = extras[:, 1].long()  # (bs, )
-            out_actions = [
-                t_pfs[e, gcat.item() + 2].argmax().item()
-                for e, gcat in enumerate(goal_cat_id)
-            ]
+            out_actions = [t_pfs[e, gcat.item() + 2].argmax().item() for e, gcat in enumerate(goal_cat_id)]
             return value, out_actions, action_log_probs, rnn_hxs, {}
 
         # Transform back the prediction if needed
@@ -144,9 +135,7 @@ class RL_Policy(nn.Module):
             rev_ego_agent_poses = pgeo.subtract_poses(t_ego_agent_poses, origin_pose)
             pfs = pgeo.spatial_transform_map(pfs, rev_ego_agent_poses)  # (B, N, H, W)
             if area_pfs is not None:
-                area_pfs = pgeo.spatial_transform_map(
-                    area_pfs, rev_ego_agent_poses
-                )  # (B, 1, H, W)
+                area_pfs = pgeo.spatial_transform_map(area_pfs, rev_ego_agent_poses)  # (B, 1, H, W)
 
         # Add agent to location distance if needed
         if self.args.add_agent2loc_distance:
@@ -187,9 +176,7 @@ class RL_Policy(nn.Module):
             "raw_pfs": init_pfs,
             "area_pfs": area_pfs,
         }
-        pred_maps = {
-            k: asnumpy(v) if v is not None else v for k, v in pred_maps.items()
-        }
+        pred_maps = {k: asnumpy(v) if v is not None else v for k, v in pred_maps.items()}
         if self.args.visualize or self.args.print_images:
             # Visualize the transformed PFs
             self._cached_visualizations = RL_Policy.generate_pf_vis(
@@ -256,7 +243,7 @@ class RL_Policy(nn.Module):
             for i in range(B):
                 ri, ci = agent_locs[i]
                 size = int(self.args.mask_size * 100.0 / self.args.map_resolution)
-                goal_pfs[i, ri - size : ri + size + 1, ci - size : ci + size + 1] = 0
+                goal_pfs[i, ri - size:ri + size + 1, ci - size:ci + size + 1] = 0
 
         act_ixs = goal_pfs.view(B, -1).max(dim=1).indices
         # Convert action to (0, 1) values for x and y coors

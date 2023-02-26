@@ -40,9 +40,7 @@ class GlobalAgent(object):
         self.sem_map_model = Semantic_Mapping.from_config(cfg, self.device)
         self.sem_map_model.eval()
         # Create global policy
-        self.g_policy = policy_registry.get_policy(cfg.GLOBAL_AGENT.name).from_config(
-            cfg
-        )
+        self.g_policy = policy_registry.get_policy(cfg.GLOBAL_AGENT.name).from_config(cfg)
         self.g_policy.load_checkpoint()
         self.g_policy.to(device)
         self.g_policy.eval()
@@ -102,9 +100,7 @@ class GlobalAgent(object):
                     120,
                     180,  # Goal mask
                 ]
-                self.color_palette += [
-                    c for color in d3_40_colors_rgb[:ncat] for c in color.tolist()
-                ]
+                self.color_palette += [c for color in d3_40_colors_rgb[:ncat] for c in color.tolist()]
 
     def act(self, batched_obs, agent_states, steps, g_masks, l_masks):
 
@@ -136,9 +132,7 @@ class GlobalAgent(object):
         self.time_benchmarks["semantic_prediction"].append(time.time() - start_time)
 
         start_time = time.time()
-        _, local_map, _, local_pose = self.sem_map_model(
-            state, poses, local_map, local_pose
-        )
+        _, local_map, _, local_pose = self.sem_map_model(state, poses, local_map, local_pose)
 
         locs = local_pose.cpu().numpy()
         planner_pose_inputs[:, :3] = locs + origins
@@ -149,7 +143,7 @@ class GlobalAgent(object):
                 int(r * 100.0 / gcfg.map_resolution),
                 int(c * 100.0 / gcfg.map_resolution),
             ]
-            local_map[e, 2:4, loc_r - 2 : loc_r + 3, loc_c - 2 : loc_c + 3] = 1.0
+            local_map[e, 2:4, loc_r - 2:loc_r + 3, loc_c - 2:loc_c + 3] = 1.0
 
         self.time_benchmarks["semantic_mapping"].append(time.time() - start_time)
         ########################################################################
@@ -162,12 +156,8 @@ class GlobalAgent(object):
                 if wait_env[e] == 1:  # New episode
                     wait_env[e] = 0.0
 
-                full_map[
-                    e, :, lmb[e, 0] : lmb[e, 1], lmb[e, 2] : lmb[e, 3]
-                ] = local_map[e]
-                full_pose[e] = (
-                    local_pose[e] + torch.from_numpy(origins[e]).to(self.device).float()
-                )
+                full_map[e, :, lmb[e, 0]:lmb[e, 1], lmb[e, 2]:lmb[e, 3]] = local_map[e]
+                full_pose[e] = (local_pose[e] + torch.from_numpy(origins[e]).to(self.device).float())
 
                 locs = full_pose[e].cpu().numpy()
                 r, c = locs[1], locs[0]
@@ -192,9 +182,7 @@ class GlobalAgent(object):
                         update_local_boundaries = False
 
                 if update_local_boundaries:
-                    lmb[e] = self.get_local_map_boundaries(
-                        (loc_r, loc_c), (local_w, local_h), (full_w, full_h)
-                    )
+                    lmb[e] = self.get_local_map_boundaries((loc_r, loc_c), (local_w, local_h), (full_w, full_h))
 
                 planner_pose_inputs[e, 3:] = lmb[e]
                 origins[e] = [
@@ -203,21 +191,15 @@ class GlobalAgent(object):
                     0.0,
                 ]
 
-                local_map[e] = full_map[
-                    e, :, lmb[e, 0] : lmb[e, 1], lmb[e, 2] : lmb[e, 3]
-                ]
-                local_pose[e] = (
-                    full_pose[e] - torch.from_numpy(origins[e]).to(self.device).float()
-                )
+                local_map[e] = full_map[e, :, lmb[e, 0]:lmb[e, 1], lmb[e, 2]:lmb[e, 3]]
+                local_pose[e] = (full_pose[e] - torch.from_numpy(origins[e]).to(self.device).float())
 
             locs = local_pose.cpu().numpy()
             for e in range(self.cfg.NUM_ENVIRONMENTS):
                 global_orientation[e] = int((locs[e, 2] + 180.0) / 5.0)
 
             global_input[:, 0:4, :, :] = local_map[:, 0:4, :, :].detach()
-            global_input[:, 4:8, :, :] = nn.MaxPool2d(gcfg.global_downscaling)(
-                full_map[:, 0:4, :, :]
-            )
+            global_input[:, 4:8, :, :] = nn.MaxPool2d(gcfg.global_downscaling)(full_map[:, 0:4, :, :])
             global_input[:, 8:, :, :] = local_map[:, 4:, :, :].detach()
             goal_cat_id = batched_obs["objectgoal"]
             extras[:, 0] = global_orientation[:, 0]
@@ -284,9 +266,7 @@ class GlobalAgent(object):
                 for e in range(self.cfg.NUM_ENVIRONMENTS):
                     map_loc = extra_maps["agent_locations"][e]
                     # Crop map about a center
-                    ego_agent_poses.append(
-                        [map_loc[0], map_loc[1], math.radians(start_o)]
-                    )
+                    ego_agent_poses.append([map_loc[0], map_loc[1], math.radians(start_o)])
                 ego_agent_poses = torch.Tensor(ego_agent_poses).to(self.device)
                 extra_maps["ego_agent_poses"] = ego_agent_poses
 
@@ -313,14 +293,8 @@ class GlobalAgent(object):
                 else:
                     # Output action locations
                     assert len(cpu_actions.shape) == 2
-                    global_goals = [
-                        [int(action[0] * local_w), int(action[1] * local_h)]
-                        for action in cpu_actions
-                    ]
-                    global_goals = [
-                        [min(x, int(local_w - 1)), min(y, int(local_h - 1))]
-                        for x, y in global_goals
-                    ]
+                    global_goals = [[int(action[0] * local_w), int(action[1] * local_h)] for action in cpu_actions]
+                    global_goals = [[min(x, int(local_w - 1)), min(y, int(local_h - 1))] for x, y in global_goals]
             g_masks.fill_(1.0)
             self.time_benchmarks["goal_sampling"].append(time.time() - start_time)
 
@@ -329,9 +303,7 @@ class GlobalAgent(object):
         ########################################################################
         start_time = time.time()
         found_goal = [0 for _ in range(self.cfg.NUM_ENVIRONMENTS)]
-        goal_maps = [
-            np.zeros((local_w, local_h)) for _ in range(self.cfg.NUM_ENVIRONMENTS)
-        ]
+        goal_maps = [np.zeros((local_w, local_h)) for _ in range(self.cfg.NUM_ENVIRONMENTS)]
 
         if not self.g_policy.has_action_output:
             # Set goal to sampled location
@@ -378,9 +350,7 @@ class GlobalAgent(object):
                 p_input["sem_map_pred"] = local_map[e, 4:, :, :].argmax(0).cpu().numpy()
                 p_input["pf_pred"] = pf_visualizations[e]
 
-        actions, replan_flags = self.planners.plan_and_act(
-            planner_inputs, l_masks.cpu().numpy()
-        )  # (B, 1) ndarray
+        actions, replan_flags = self.planners.plan_and_act(planner_inputs, l_masks.cpu().numpy())  # (B, 1) ndarray
         actions = torch.from_numpy(actions)
         if self.g_policy.has_action_output:
             for e in range(self.cfg.NUM_ENVIRONMENTS):
@@ -458,9 +428,7 @@ class GlobalAgent(object):
             else:
                 # Convert depth to meters
                 depth_m = depth / 100.0
-                sem_seg_pred = self.sem_seg_model.get_predictions(
-                    rgb, depth_m
-                )  # (B, N, H, W)
+                sem_seg_pred = self.sem_seg_model.get_predictions(rgb, depth_m)  # (B, N, H, W)
         # Downscale observations
         ds = cfg.env_frame_width // cfg.frame_width
         if ds != 1:
@@ -469,8 +437,8 @@ class GlobalAgent(object):
                 (cfg.frame_height, cfg.frame_width),
                 mode="nearest",
             )
-            depth = depth[:, :, (ds // 2) :: ds, (ds // 2) :: ds]
-            sem_seg_pred = sem_seg_pred[:, :, (ds // 2) :: ds, (ds // 2) :: ds]
+            depth = depth[:, :, (ds // 2)::ds, (ds // 2)::ds]
+            sem_seg_pred = sem_seg_pred[:, :, (ds // 2)::ds, (ds // 2)::ds]
 
         state = torch.cat([rgb, depth, sem_seg_pred], dim=1)
 
@@ -522,9 +490,7 @@ class GlobalAgent(object):
             ],
             dim=1,
         )
-        prev_sim_location = torch.from_numpy(agent_states["prev_sim_location"]).to(
-            curr_sim_location.device
-        )
+        prev_sim_location = torch.from_numpy(agent_states["prev_sim_location"]).to(curr_sim_location.device)
         # Measure pose change
         pose = self._get_rel_pose_change(prev_sim_location, curr_sim_location)
         # If episode terminated in last step, set pose change to zero
@@ -538,7 +504,7 @@ class GlobalAgent(object):
         x2, y2, o2 = torch.unbind(pos2, dim=1)
 
         theta = torch.atan2(y2 - y1, x2 - x1) - o1
-        dist = torch.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+        dist = torch.sqrt((x1 - x2)**2 + (y1 - y2)**2)
         dx = dist * torch.cos(theta)
         dy = dist * torch.sin(theta)
         do = o2 - o1
@@ -595,11 +561,9 @@ class GlobalAgent(object):
                 int(c * 100.0 / gcfg.map_resolution),
             ]
 
-            full_map[e, 2:4, loc_r - 1 : loc_r + 2, loc_c - 1 : loc_c + 2] = 1.0
+            full_map[e, 2:4, loc_r - 1:loc_r + 2, loc_c - 1:loc_c + 2] = 1.0
 
-            lmb[e] = self.get_local_map_boundaries(
-                (loc_r, loc_c), (local_w, local_h), (full_w, full_h)
-            )
+            lmb[e] = self.get_local_map_boundaries((loc_r, loc_c), (local_w, local_h), (full_w, full_h))
 
             planner_pose_inputs[e, 3:] = lmb[e]
             origins[e] = [
@@ -609,10 +573,8 @@ class GlobalAgent(object):
             ]
 
         for e in range(self.cfg.NUM_ENVIRONMENTS):
-            local_map[e] = full_map[e, :, lmb[e, 0] : lmb[e, 1], lmb[e, 2] : lmb[e, 3]]
-            local_pose[e] = (
-                full_pose[e] - torch.from_numpy(origins[e]).to(self.device).float()
-            )
+            local_map[e] = full_map[e, :, lmb[e, 0]:lmb[e, 1], lmb[e, 2]:lmb[e, 3]]
+            local_pose[e] = (full_pose[e] - torch.from_numpy(origins[e]).to(self.device).float())
 
         # Update states (probably unnecessary)
         agent_states["full_map"] = full_map
@@ -652,11 +614,9 @@ class GlobalAgent(object):
             int(c * 100.0 / gcfg.map_resolution),
         ]
 
-        full_map[e, 2:4, loc_r - 1 : loc_r + 2, loc_c - 1 : loc_c + 2] = 1.0
+        full_map[e, 2:4, loc_r - 1:loc_r + 2, loc_c - 1:loc_c + 2] = 1.0
 
-        lmb[e] = self.get_local_map_boundaries(
-            (loc_r, loc_c), (local_w, local_h), (full_w, full_h)
-        )
+        lmb[e] = self.get_local_map_boundaries((loc_r, loc_c), (local_w, local_h), (full_w, full_h))
 
         planner_pose_inputs[e, 3:] = lmb[e]
         origins[e] = [
@@ -665,10 +625,8 @@ class GlobalAgent(object):
             0.0,
         ]
 
-        local_map[e] = full_map[e, :, lmb[e, 0] : lmb[e, 1], lmb[e, 2] : lmb[e, 3]]
-        local_pose[e] = (
-            full_pose[e] - torch.from_numpy(origins[e]).to(self.device).float()
-        )
+        local_map[e] = full_map[e, :, lmb[e, 0]:lmb[e, 1], lmb[e, 2]:lmb[e, 3]]
+        local_pose[e] = (full_pose[e] - torch.from_numpy(origins[e]).to(self.device).float())
 
         # Update states (probably unnecessary)
         agent_states["full_map"] = full_map
@@ -724,8 +682,8 @@ class GlobalAgent(object):
         prev_sim_location = np.zeros((B, 3), dtype=np.float32)
 
         # Other states
-        wait_env = np.zeros((B,))
-        finished = np.zeros((B,))
+        wait_env = np.zeros((B, ))
+        finished = np.zeros((B, ))
 
         agent_states = {
             "full_map": full_map,
@@ -799,15 +757,11 @@ class GlobalAgent(object):
         sem_map_vis = np.flipud(sem_map_vis)
 
         sem_map_vis = sem_map_vis[:, :, [2, 1, 0]]
-        sem_map_vis = cv2.resize(
-            sem_map_vis, (480, 480), interpolation=cv2.INTER_NEAREST
-        )
+        sem_map_vis = cv2.resize(sem_map_vis, (480, 480), interpolation=cv2.INTER_NEAREST)
 
         pos = (
             (start_x * 100.0 / gcfg.map_resolution - gy1) * 480 / map_pred.shape[0],
-            (map_pred.shape[1] - start_y * 100.0 / gcfg.map_resolution + gx1)
-            * 480
-            / map_pred.shape[1],
+            (map_pred.shape[1] - start_y * 100.0 / gcfg.map_resolution + gx1) * 480 / map_pred.shape[1],
             np.deg2rad(-start_o),
         )
 

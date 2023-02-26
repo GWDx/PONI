@@ -7,7 +7,6 @@ from habitat.config import Config
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes, Simulator
 
-
 MP3D_CATEGORY_MAPPING = {
     "chair": 0,
     "table": 1,
@@ -66,9 +65,7 @@ class SemanticCategorySensor(Sensor):
             self.category_to_task_category_id = MP3D_CATEGORY_MAPPING
         else:
             self.category_to_task_category_id = GIBSON_CATEGORY_MAPPING
-        self.num_task_categories = (
-            np.max(list(self.category_to_task_category_id.values())) + 1
-        )
+        self.num_task_categories = (np.max(list(self.category_to_task_category_id.values())) + 1)
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.COLOR
@@ -87,9 +84,7 @@ class SemanticCategorySensor(Sensor):
             self._current_episode_id = episode_uniq_id
             # Get mapping from instance id to task id
             scene = self._sim.semantic_annotations()
-            self.instance_id_to_task_id = (
-                np.ones((len(scene.objects),), dtype=np.int64) * -1
-            )
+            self.instance_id_to_task_id = (np.ones((len(scene.objects), ), dtype=np.int64) * -1)
             for obj in scene.objects:
                 if obj is None:
                     continue

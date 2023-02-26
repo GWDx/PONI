@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-
 """Utilities for processing depth images.
 """
 import itertools
@@ -107,17 +106,15 @@ def bin_points(XYZ_cms, map_size, z_bins, xy_resolution):
         Y_bin = np.round(XYZ_cm[:, :, 1] / xy_resolution).astype(np.int32)
         Z_bin = np.digitize(XYZ_cm[:, :, 2], bins=z_bins).astype(np.int32)
 
-        isvalid = np.array(
-            [
-                X_bin >= 0,
-                X_bin < map_size,
-                Y_bin >= 0,
-                Y_bin < map_size,
-                Z_bin >= 0,
-                Z_bin < n_z_bins,
-                isnotnan,
-            ]
-        )
+        isvalid = np.array([
+            X_bin >= 0,
+            X_bin < map_size,
+            Y_bin >= 0,
+            Y_bin < map_size,
+            Z_bin >= 0,
+            Z_bin < n_z_bins,
+            isnotnan,
+        ])
         isvalid = np.all(isvalid, axis=0)
 
         ind = (Y_bin * map_size + X_bin) * n_z_bins + Z_bin
@@ -138,9 +135,7 @@ def bin_points(XYZ_cms, map_size, z_bins, xy_resolution):
 # Optimizating implementation
 # -------------------------------------------------------------------------------
 def get_meshgrid(Y_t, device):
-    grid_x, grid_z = torch.meshgrid(
-        torch.arange(Y_t.shape[-1]), torch.arange(Y_t.shape[-2] - 1, -1, -1)
-    )
+    grid_x, grid_z = torch.meshgrid(torch.arange(Y_t.shape[-1]), torch.arange(Y_t.shape[-2] - 1, -1, -1))
     grid_x = grid_x.transpose(1, 0).to(device)
     grid_z = grid_z.transpose(1, 0).to(device)
     grid_x = grid_x.unsqueeze(0).expand(Y_t.size())
@@ -164,16 +159,8 @@ def get_point_cloud_from_z_t(Y_t, camera_matrix, device, scale=1, grids=None):
     else:
         grid_x, grid_z = grids
 
-    X_t = (
-        (grid_x[:, ::scale, ::scale] - camera_matrix.xc)
-        * Y_t[:, ::scale, ::scale]
-        / camera_matrix.f
-    )
-    Z_t = (
-        (grid_z[:, ::scale, ::scale] - camera_matrix.zc)
-        * Y_t[:, ::scale, ::scale]
-        / camera_matrix.f
-    )
+    X_t = ((grid_x[:, ::scale, ::scale] - camera_matrix.xc) * Y_t[:, ::scale, ::scale] / camera_matrix.f)
+    Z_t = ((grid_z[:, ::scale, ::scale] - camera_matrix.zc) * Y_t[:, ::scale, ::scale] / camera_matrix.f)
 
     XYZ = torch.stack((X_t, Y_t[:, ::scale, ::scale], Z_t), dim=len(Y_t.size()))
 
@@ -192,9 +179,7 @@ def transform_camera_view_t(XYZ, sensor_height, camera_elevation_degree, device)
         XYZ : ...x3
     """
     R = ru.get_r_matrix([1.0, 0.0, 0.0], angle=np.deg2rad(camera_elevation_degree))
-    XYZ = torch.matmul(
-        XYZ.reshape(-1, 3), torch.from_numpy(R).float().transpose(1, 0).to(device)
-    ).reshape(XYZ.shape)
+    XYZ = torch.matmul(XYZ.reshape(-1, 3), torch.from_numpy(R).float().transpose(1, 0).to(device)).reshape(XYZ.shape)
     XYZ[..., 2] = XYZ[..., 2] + sensor_height
     return XYZ
 
@@ -210,9 +195,7 @@ def transform_pose_t(XYZ, current_pose, device):
         XYZ : ...x3
     """
     R = ru.get_r_matrix([0.0, 0.0, 1.0], angle=current_pose[2] - np.pi / 2.0)
-    XYZ = torch.matmul(
-        XYZ.reshape(-1, 3), torch.from_numpy(R).float().transpose(1, 0).to(device)
-    ).reshape(XYZ.shape)
+    XYZ = torch.matmul(XYZ.reshape(-1, 3), torch.from_numpy(R).float().transpose(1, 0).to(device)).reshape(XYZ.shape)
     XYZ[..., 0] += current_pose[0]
     XYZ[..., 1] += current_pose[1]
     return XYZ

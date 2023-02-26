@@ -48,9 +48,7 @@ EPISODE_OVER = "episode_over"
 GET_METRICS = "get_metrics"
 
 
-def _make_env_fn(
-    config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
-) -> Env:
+def _make_env_fn(config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0) -> Env:
     """Constructor for default habitat `env.Env`.
 
     :param config: configuration for environment.
@@ -110,15 +108,14 @@ class VectorEnv:
         self._is_waiting = False
         self._is_closed = True
 
-        assert (
-            env_fn_args is not None and len(env_fn_args) > 0
-        ), "number of environments to be created should be greater than 0"
+        assert (env_fn_args is not None
+                and len(env_fn_args) > 0), "number of environments to be created should be greater than 0"
 
         self._num_envs = len(env_fn_args)
 
         assert multiprocessing_start_method in self._valid_start_methods, (
-            "multiprocessing_start_method must be one of {}. Got '{}'"
-        ).format(self._valid_start_methods, multiprocessing_start_method)
+            "multiprocessing_start_method must be one of {}. Got '{}'").format(self._valid_start_methods,
+                                                                               multiprocessing_start_method)
         self._auto_reset_done = auto_reset_done
         self._mp_ctx = mp.get_context(multiprocessing_start_method)
         self._workers = []
@@ -194,10 +191,7 @@ class VectorEnv:
                 elif command == RENDER_COMMAND:
                     connection_write_fn(env.render(*data[0], **data[1]))
 
-                elif (
-                    command == OBSERVATION_SPACE_COMMAND
-                    or command == ACTION_SPACE_COMMAND
-                ):
+                elif (command == OBSERVATION_SPACE_COMMAND or command == ACTION_SPACE_COMMAND):
                     if isinstance(command, str):
                         connection_write_fn(getattr(env, command))
 
@@ -262,13 +256,9 @@ class VectorEnv:
         make_env_fn: Callable[..., Union[Env, RLEnv]] = _make_env_fn,
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
-        parent_connections, worker_connections = zip(
-            *[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)]
-        )
+        parent_connections, worker_connections = zip(*[self._mp_ctx.Pipe(duplex=True) for _ in range(self._num_envs)])
         self._workers = []
-        for worker_conn, parent_conn, env_args in zip(
-            worker_connections, parent_connections, env_fn_args
-        ):
+        for worker_conn, parent_conn, env_args in zip(worker_connections, parent_connections, env_fn_args):
             ps = self._mp_ctx.Process(
                 target=self._worker_env,
                 args=(
@@ -480,9 +470,7 @@ class VectorEnv:
         :return: result of calling the function.
         """
         self._is_waiting = True
-        self._connection_write_fns[index](
-            (CALL_COMMAND, (function_name, function_args))
-        )
+        self._connection_write_fns[index]((CALL_COMMAND, (function_name, function_args)))
         result = self._connection_read_fns[index]()
         self._is_waiting = False
         return result
@@ -582,9 +570,7 @@ class VectorEnv:
         return np.stack(fmm_dists)
 
     def _assert_not_closed(self):
-        assert (
-            not self._is_closed
-        ), "Trying to operate on a SubprocVecEnv after calling close()"
+        assert (not self._is_closed), "Trying to operate on a SubprocVecEnv after calling close()"
 
     @property
     def _valid_start_methods(self) -> Set[str]:
@@ -608,20 +594,16 @@ class ThreadedVectorEnv(VectorEnv):
     when using `VectorEnv` because you can actually put break points in the
     environment methods. It should not be used for best performance.
     """
-
     def _spawn_workers(
         self,
         env_fn_args: Sequence[Tuple],
         make_env_fn: Callable[..., Env] = _make_env_fn,
         workers_ignore_signals: bool = False,
     ) -> Tuple[List[Callable[[], Any]], List[Callable[[Any], None]]]:
-        parent_read_queues, parent_write_queues = zip(
-            *[(Queue(), Queue()) for _ in range(self._num_envs)]
-        )
+        parent_read_queues, parent_write_queues = zip(*[(Queue(), Queue()) for _ in range(self._num_envs)])
         self._workers = []
-        for parent_read_queue, parent_write_queue, env_args in zip(
-            parent_read_queues, parent_write_queues, env_fn_args
-        ):
+        for parent_read_queue, parent_write_queue, env_args in zip(parent_read_queues, parent_write_queues,
+                                                                   env_fn_args):
             thread = Thread(
                 target=self._worker_env,
                 args=(
@@ -671,9 +653,8 @@ class ListEnv:
             of vectorized environments.
         """
 
-        assert (
-            env_fn_args is not None and len(env_fn_args) > 0
-        ), "number of environments to be created should be greater than 0"
+        assert (env_fn_args is not None
+                and len(env_fn_args) > 0), "number of environments to be created should be greater than 0"
 
         self._num_envs = len(env_fn_args)
 

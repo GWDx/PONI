@@ -20,7 +20,6 @@ from semexp.model_pf import RL_Policy
 from semexp.utils.storage import GlobalRolloutStorage
 from torch.utils.tensorboard import SummaryWriter
 
-
 os.environ["OMP_NUM_THREADS"] = "1"
 torch.set_num_threads(1)
 
@@ -47,9 +46,7 @@ def main(args=None):
     if (not os.path.exists(tb_dir)) and (not args.eval):
         os.makedirs(tb_dir)
 
-    logging.basicConfig(
-        filename=log_dir + "train.log", level=logging.INFO, filemode="a"
-    )
+    logging.basicConfig(filename=log_dir + "train.log", level=logging.INFO, filemode="a")
     print("Dumping at {}".format(log_dir))
     print(args)
     logging.info(args)
@@ -76,10 +73,7 @@ def main(args=None):
         "goal_distance",
     ]
     if args.eval:
-        episode_metrics = {
-            m: [deque(maxlen=num_episodes) for _ in range(args.num_processes)]
-            for m in METRICS
-        }
+        episode_metrics = {m: [deque(maxlen=num_episodes) for _ in range(args.num_processes)] for m in METRICS}
     else:
         episode_metrics = {m: deque(maxlen=1000) for m in METRICS}
 
@@ -179,11 +173,9 @@ def main(args=None):
                 int(c * 100.0 / args.map_resolution),
             ]
 
-            full_map[e, 2:4, loc_r - 1 : loc_r + 2, loc_c - 1 : loc_c + 2] = 1.0
+            full_map[e, 2:4, loc_r - 1:loc_r + 2, loc_c - 1:loc_c + 2] = 1.0
 
-            lmb[e] = get_local_map_boundaries(
-                (loc_r, loc_c), (local_w, local_h), (full_w, full_h)
-            )
+            lmb[e] = get_local_map_boundaries((loc_r, loc_c), (local_w, local_h), (full_w, full_h))
 
             planner_pose_inputs[e, 3:] = lmb[e]
             origins[e] = [
@@ -193,10 +185,8 @@ def main(args=None):
             ]
 
         for e in range(num_scenes):
-            local_map[e] = full_map[e, :, lmb[e, 0] : lmb[e, 1], lmb[e, 2] : lmb[e, 3]]
-            local_pose[e] = (
-                full_pose[e] - torch.from_numpy(origins[e]).to(device).float()
-            )
+            local_map[e] = full_map[e, :, lmb[e, 0]:lmb[e, 1], lmb[e, 2]:lmb[e, 3]]
+            local_pose[e] = (full_pose[e] - torch.from_numpy(origins[e]).to(device).float())
 
     def init_map_and_pose_for_env(e):
         full_map[e].fill_(0.0)
@@ -211,11 +201,9 @@ def main(args=None):
             int(c * 100.0 / args.map_resolution),
         ]
 
-        full_map[e, 2:4, loc_r - 1 : loc_r + 2, loc_c - 1 : loc_c + 2] = 1.0
+        full_map[e, 2:4, loc_r - 1:loc_r + 2, loc_c - 1:loc_c + 2] = 1.0
 
-        lmb[e] = get_local_map_boundaries(
-            (loc_r, loc_c), (local_w, local_h), (full_w, full_h)
-        )
+        lmb[e] = get_local_map_boundaries((loc_r, loc_c), (local_w, local_h), (full_w, full_h))
 
         planner_pose_inputs[e, 3:] = lmb[e]
         origins[e] = [
@@ -224,15 +212,15 @@ def main(args=None):
             0.0,
         ]
 
-        local_map[e] = full_map[e, :, lmb[e, 0] : lmb[e, 1], lmb[e, 2] : lmb[e, 3]]
+        local_map[e] = full_map[e, :, lmb[e, 0]:lmb[e, 1], lmb[e, 2]:lmb[e, 3]]
         local_pose[e] = full_pose[e] - torch.from_numpy(origins[e]).to(device).float()
 
     def update_intrinsic_rew(e):
         prev_explored_area = full_map[e, 1].sum(1).sum(0)
-        full_map[e, :, lmb[e, 0] : lmb[e, 1], lmb[e, 2] : lmb[e, 3]] = local_map[e]
+        full_map[e, :, lmb[e, 0]:lmb[e, 1], lmb[e, 2]:lmb[e, 3]] = local_map[e]
         curr_explored_area = full_map[e, 1].sum(1).sum(0)
         intrinsic_rews[e] = curr_explored_area - prev_explored_area
-        intrinsic_rews[e] *= (args.map_resolution / 100.0) ** 2  # to m^2
+        intrinsic_rews[e] *= (args.map_resolution / 100.0)**2  # to m^2
 
     init_map_and_pose()
 
@@ -242,7 +230,7 @@ def main(args=None):
     g_observation_space = gym.spaces.Box(0, 1, (ngc, local_w, local_h), dtype="uint8")
 
     # Global policy action space
-    g_action_space = gym.spaces.Box(low=0.0, high=0.99, shape=(2,), dtype=np.float32)
+    g_action_space = gym.spaces.Box(low=0.0, high=0.99, shape=(2, ), dtype=np.float32)
 
     # Semantic Mapping
     sem_map_module = Semantic_Mapping(args).to(device)
@@ -274,13 +262,8 @@ def main(args=None):
         g_policy.eval()
 
     # Predict semantic map from frame 1
-    poses = (
-        torch.from_numpy(
-            np.asarray([infos[env_idx]["sensor_pose"] for env_idx in range(num_scenes)])
-        )
-        .float()
-        .to(device)
-    )
+    poses = (torch.from_numpy(np.asarray([infos[env_idx]["sensor_pose"]
+                                          for env_idx in range(num_scenes)])).float().to(device))
 
     _, local_map, _, local_pose = sem_map_module(obs, poses, local_map, local_pose)
 
@@ -296,17 +279,13 @@ def main(args=None):
             int(c * 100.0 / args.map_resolution),
         ]
 
-        local_map[e, 2:4, loc_r - 1 : loc_r + 2, loc_c - 1 : loc_c + 2] = 1.0
+        local_map[e, 2:4, loc_r - 1:loc_r + 2, loc_c - 1:loc_c + 2] = 1.0
         global_orientation[e] = int((locs[e, 2] + 180.0) / 5.0)
 
     global_input[:, 0:4, :, :] = local_map[:, 0:4, :, :].detach()
-    global_input[:, 4:8, :, :] = nn.MaxPool2d(args.global_downscaling)(
-        full_map[:, 0:4, :, :]
-    )
+    global_input[:, 4:8, :, :] = nn.MaxPool2d(args.global_downscaling)(full_map[:, 0:4, :, :])
     global_input[:, 8:, :, :] = local_map[:, 4:, :, :].detach()
-    goal_cat_id = torch.from_numpy(
-        np.asarray([infos[env_idx]["goal_cat_id"] for env_idx in range(num_scenes)])
-    )
+    goal_cat_id = torch.from_numpy(np.asarray([infos[env_idx]["goal_cat_id"] for env_idx in range(num_scenes)]))
 
     extras = torch.zeros(num_scenes, es)
     extras[:, 0] = global_orientation[:, 0]
@@ -377,14 +356,8 @@ def main(args=None):
     if not g_policy.has_action_output:
         cpu_actions = g_action.cpu().numpy()
         if len(cpu_actions.shape) == 2:  # (B, 2) XY locations
-            global_goals = [
-                [int(action[0] * local_w), int(action[1] * local_h)]
-                for action in cpu_actions
-            ]
-            global_goals = [
-                [min(x, int(local_w - 1)), min(y, int(local_h - 1))]
-                for x, y in global_goals
-            ]
+            global_goals = [[int(action[0] * local_w), int(action[1] * local_h)] for action in cpu_actions]
+            global_goals = [[min(x, int(local_w - 1)), min(y, int(local_h - 1))] for x, y in global_goals]
         else:
             assert len(cpu_actions.shape) == 3  # (B, H, W) action map
             global_goals = None
@@ -516,15 +489,8 @@ def main(args=None):
 
         # ------------------------------------------------------------------
         # Semantic Mapping Module
-        poses = (
-            torch.from_numpy(
-                np.asarray(
-                    [infos[env_idx]["sensor_pose"] for env_idx in range(num_scenes)]
-                )
-            )
-            .float()
-            .to(device)
-        )
+        poses = (torch.from_numpy(np.asarray([infos[env_idx]["sensor_pose"]
+                                              for env_idx in range(num_scenes)])).float().to(device))
 
         _, local_map, _, local_pose = sem_map_module(obs, poses, local_map, local_pose)
 
@@ -537,7 +503,7 @@ def main(args=None):
                 int(r * 100.0 / args.map_resolution),
                 int(c * 100.0 / args.map_resolution),
             ]
-            local_map[e, 2:4, loc_r - 2 : loc_r + 3, loc_c - 2 : loc_c + 3] = 1.0
+            local_map[e, 2:4, loc_r - 2:loc_r + 3, loc_c - 2:loc_c + 3] = 1.0
 
         # ------------------------------------------------------------------
 
@@ -551,12 +517,8 @@ def main(args=None):
                 else:
                     update_intrinsic_rew(e)
 
-                full_map[
-                    e, :, lmb[e, 0] : lmb[e, 1], lmb[e, 2] : lmb[e, 3]
-                ] = local_map[e]
-                full_pose[e] = (
-                    local_pose[e] + torch.from_numpy(origins[e]).to(device).float()
-                )
+                full_map[e, :, lmb[e, 0]:lmb[e, 1], lmb[e, 2]:lmb[e, 3]] = local_map[e]
+                full_pose[e] = (local_pose[e] + torch.from_numpy(origins[e]).to(device).float())
 
                 locs = full_pose[e].cpu().numpy()
                 r, c = locs[1], locs[0]
@@ -565,9 +527,7 @@ def main(args=None):
                     int(c * 100.0 / args.map_resolution),
                 ]
 
-                lmb[e] = get_local_map_boundaries(
-                    (loc_r, loc_c), (local_w, local_h), (full_w, full_h)
-                )
+                lmb[e] = get_local_map_boundaries((loc_r, loc_c), (local_w, local_h), (full_w, full_h))
 
                 planner_pose_inputs[e, 3:] = lmb[e]
                 origins[e] = [
@@ -576,39 +536,22 @@ def main(args=None):
                     0.0,
                 ]
 
-                local_map[e] = full_map[
-                    e, :, lmb[e, 0] : lmb[e, 1], lmb[e, 2] : lmb[e, 3]
-                ]
-                local_pose[e] = (
-                    full_pose[e] - torch.from_numpy(origins[e]).to(device).float()
-                )
+                local_map[e] = full_map[e, :, lmb[e, 0]:lmb[e, 1], lmb[e, 2]:lmb[e, 3]]
+                local_pose[e] = (full_pose[e] - torch.from_numpy(origins[e]).to(device).float())
 
             locs = local_pose.cpu().numpy()
             for e in range(num_scenes):
                 global_orientation[e] = int((locs[e, 2] + 180.0) / 5.0)
             global_input[:, 0:4, :, :] = local_map[:, 0:4, :, :]
-            global_input[:, 4:8, :, :] = nn.MaxPool2d(args.global_downscaling)(
-                full_map[:, 0:4, :, :]
-            )
+            global_input[:, 4:8, :, :] = nn.MaxPool2d(args.global_downscaling)(full_map[:, 0:4, :, :])
             global_input[:, 8:, :, :] = local_map[:, 4:, :, :].detach()
-            goal_cat_id = torch.from_numpy(
-                np.asarray(
-                    [infos[env_idx]["goal_cat_id"] for env_idx in range(num_scenes)]
-                )
-            )
+            goal_cat_id = torch.from_numpy(np.asarray([infos[env_idx]["goal_cat_id"] for env_idx in range(num_scenes)]))
             extras[:, 0] = global_orientation[:, 0]
             extras[:, 1] = goal_cat_id
 
             # Get exploration reward and metrics
-            g_reward = (
-                torch.from_numpy(
-                    np.asarray(
-                        [infos[env_idx]["g_reward"] for env_idx in range(num_scenes)]
-                    )
-                )
-                .float()
-                .to(device)
-            )
+            g_reward = (torch.from_numpy(np.asarray([infos[env_idx]["g_reward"]
+                                                     for env_idx in range(num_scenes)])).float().to(device))
             g_reward += args.intrinsic_rew_coeff * intrinsic_rews.detach()
 
             g_process_rewards += g_reward.cpu().numpy()
@@ -672,9 +615,7 @@ def main(args=None):
                 for e in range(num_scenes):
                     map_loc = agent_locations[e]
                     # Crop map about a center
-                    ego_agent_poses.append(
-                        [map_loc[0], map_loc[1], math.radians(start_o)]
-                    )
+                    ego_agent_poses.append([map_loc[0], map_loc[1], math.radians(start_o)])
                 ego_agent_poses = torch.Tensor(ego_agent_poses).to(g_obs.device)
 
             # Sample long-term goal from global policy
@@ -696,14 +637,8 @@ def main(args=None):
             if not g_policy.has_action_output:
                 cpu_actions = g_action.cpu().numpy()
                 if len(cpu_actions.shape) == 2:  # (B, 2) XY locations
-                    global_goals = [
-                        [int(action[0] * local_w), int(action[1] * local_h)]
-                        for action in cpu_actions
-                    ]
-                    global_goals = [
-                        [min(x, int(local_w - 1)), min(y, int(local_h - 1))]
-                        for x, y in global_goals
-                    ]
+                    global_goals = [[int(action[0] * local_w), int(action[1] * local_h)] for action in cpu_actions]
+                    global_goals = [[min(x, int(local_w - 1)), min(y, int(local_h - 1))] for x, y in global_goals]
                 else:
                     assert len(cpu_actions.shape) == 3  # (B, H, W) action maps
                     global_goals = None
@@ -801,14 +736,12 @@ def main(args=None):
             end = time.time()
             time_elapsed = time.gmtime(end - start)
             fps = int((step) * num_scenes / (end - start))
-            log = " ".join(
-                [
-                    "Time: {0:0=2d}d".format(time_elapsed.tm_mday - 1),
-                    "{},".format(time.strftime("%Hh %Mm %Ss", time_elapsed)),
-                    "num timesteps {},".format(step * num_scenes),
-                    "FPS {},".format(fps),
-                ]
-            )
+            log = " ".join([
+                "Time: {0:0=2d}d".format(time_elapsed.tm_mday - 1),
+                "{},".format(time.strftime("%Hh %Mm %Ss", time_elapsed)),
+                "num timesteps {},".format(step * num_scenes),
+                "FPS {},".format(fps),
+            ])
             if not args.eval:
                 tbitr = step * num_scenes
                 writer.add_scalar("FPS", fps, tbitr)
@@ -816,41 +749,25 @@ def main(args=None):
             log += "\n\tRewards:"
 
             if len(g_episode_rewards) > 0:
-                log += " ".join(
-                    [
-                        " Global step mean/med rew:",
-                        "{:.4f}/{:.4f},".format(
-                            np.mean(per_step_g_rewards), np.median(per_step_g_rewards)
-                        ),
-                        " Global eps mean/med/min/max eps rew:",
-                        "{:.3f}/{:.3f}/{:.3f}/{:.3f},".format(
-                            np.mean(g_episode_rewards),
-                            np.median(g_episode_rewards),
-                            np.min(g_episode_rewards),
-                            np.max(g_episode_rewards),
-                        ),
-                    ]
-                )
+                log += " ".join([
+                    " Global step mean/med rew:",
+                    "{:.4f}/{:.4f},".format(np.mean(per_step_g_rewards), np.median(per_step_g_rewards)),
+                    " Global eps mean/med/min/max eps rew:",
+                    "{:.3f}/{:.3f}/{:.3f}/{:.3f},".format(
+                        np.mean(g_episode_rewards),
+                        np.median(g_episode_rewards),
+                        np.min(g_episode_rewards),
+                        np.max(g_episode_rewards),
+                    ),
+                ])
                 if not args.eval:
                     tbitr = step * num_scenes
-                    writer.add_scalar(
-                        "StepRewards/mean", np.mean(per_step_g_rewards), tbitr
-                    )
-                    writer.add_scalar(
-                        "StepRewards/median", np.median(per_step_g_rewards), tbitr
-                    )
-                    writer.add_scalar(
-                        "EpisodeRewards/mean", np.mean(g_episode_rewards), tbitr
-                    )
-                    writer.add_scalar(
-                        "EpisodeRewards/median", np.median(g_episode_rewards), tbitr
-                    )
-                    writer.add_scalar(
-                        "EpisodeRewards/min", np.min(g_episode_rewards), tbitr
-                    )
-                    writer.add_scalar(
-                        "EpisodeRewards/max", np.max(g_episode_rewards), tbitr
-                    )
+                    writer.add_scalar("StepRewards/mean", np.mean(per_step_g_rewards), tbitr)
+                    writer.add_scalar("StepRewards/median", np.median(per_step_g_rewards), tbitr)
+                    writer.add_scalar("EpisodeRewards/mean", np.mean(g_episode_rewards), tbitr)
+                    writer.add_scalar("EpisodeRewards/median", np.median(g_episode_rewards), tbitr)
+                    writer.add_scalar("EpisodeRewards/min", np.min(g_episode_rewards), tbitr)
+                    writer.add_scalar("EpisodeRewards/max", np.max(g_episode_rewards), tbitr)
 
             if args.eval:
                 total_metrics = {m: [] for m in METRICS}
@@ -874,28 +791,22 @@ def main(args=None):
                     log += f"\n===> ObjectNav (full) {metrics_str}: {values_str}({count_str})"
                     tbitr = step * num_scenes
                     for m in METRICS:
-                        writer.add_scalar(
-                            f"Metric/{m}", np.mean(episode_metrics[m]), tbitr
-                        )
+                        writer.add_scalar(f"Metric/{m}", np.mean(episode_metrics[m]), tbitr)
 
             log += "\n\tLosses:"
             if len(g_value_losses) > 0 and not args.eval:
-                log += " ".join(
-                    [
-                        " Policy Loss value/action/dist:",
-                        "{:.3f}/{:.3f}/{:.3f},".format(
-                            np.mean(g_value_losses),
-                            np.mean(g_action_losses),
-                            np.mean(g_dist_entropies),
-                        ),
-                    ]
-                )
+                log += " ".join([
+                    " Policy Loss value/action/dist:",
+                    "{:.3f}/{:.3f}/{:.3f},".format(
+                        np.mean(g_value_losses),
+                        np.mean(g_action_losses),
+                        np.mean(g_dist_entropies),
+                    ),
+                ])
                 tbitr = step * num_scenes
                 writer.add_scalar("Losses/value", np.mean(g_value_losses), tbitr)
                 writer.add_scalar("Losses/action", np.mean(g_action_losses), tbitr)
-                writer.add_scalar(
-                    "Losses/dist_entropy", np.mean(g_dist_entropies), tbitr
-                )
+                writer.add_scalar("Losses/dist_entropy", np.mean(g_dist_entropies), tbitr)
 
             print(log)
             logging.info(log)
@@ -929,9 +840,11 @@ def main(args=None):
             save_path = os.path.join(dump_dir, f"final_eval_stats.json")
             ckpt_steps = None
         save_data = {
-            "total_metrics": {k: np.mean(v).item() for k, v in total_metrics.items()},
+            "total_metrics": {k: np.mean(v).item()
+                              for k, v in total_metrics.items()},
             "total_steps": ckpt_steps,
-            "total_raw_metrics": {k: v for k, v in total_metrics.items()},
+            "total_raw_metrics": {k: v
+                                  for k, v in total_metrics.items()},
         }
         json.dump(save_data, open(save_path, "w"))
 

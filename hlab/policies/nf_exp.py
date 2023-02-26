@@ -43,22 +43,11 @@ class NearestFrontierExp(nn.Module):
             for i in range(B):
                 ri, ci = agent_locs[i]
                 size = int(ncfg.mask_size * 100.0 / gcfg.map_resolution)
-                local_frontier = copy.deepcopy(
-                    frontiers[
-                        i, :, ri - size : ri + size + 1, ci - size : ci + size + 1
-                    ]
-                )
-                frontiers[
-                    i, :, ri - size : ri + size + 1, ci - size : ci + size + 1
-                ] = 0
+                local_frontier = copy.deepcopy(frontiers[i, :, ri - size:ri + size + 1, ci - size:ci + size + 1])
+                frontiers[i, :, ri - size:ri + size + 1, ci - size:ci + size + 1] = 0
                 # If masking leads to zero frontier sum, then restore
                 if frontiers[i].sum() == 0:
-                    frontiers[
-                        i,
-                        :,
-                        ri - size : ri + size + 1,
-                        ci - size : ci + size + 1,
-                    ] = local_frontier
+                    frontiers[i, :, ri - size:ri + size + 1, ci - size:ci + size + 1, ] = local_frontier
 
         return None, action, None, rnn_hxs
 

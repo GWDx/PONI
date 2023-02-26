@@ -1,6 +1,5 @@
 import numpy as np
 
-
 REGISTERED_DATASETS = ["gibson", "mp3d"]
 SPLIT_SCENES = {
     "gibson": {

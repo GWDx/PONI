@@ -10,7 +10,6 @@ from habitat.core.logging import logger
 from habitat.core.vector_env import VectorEnv as HabitatVectorEnv
 from habitat.utils import profiling_wrapper
 
-
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
 RENDER_COMMAND = "render"
@@ -28,7 +27,6 @@ OBSERVATION_SPACE_NAME = "observation_space"
 
 class VectorEnv(HabitatVectorEnv):
     r"""Habitat VectorEnv adapted to include a wait_mask for each environment."""
-
     @staticmethod
     @profiling_wrapper.RangeContext("_worker_env")
     def _worker_env(

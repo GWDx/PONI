@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from einops import rearrange
 from torch.utils.checkpoint import checkpoint
 
-
 mapping_mp3d_to_thda = {
     3: 1,
     5: 2,
@@ -131,22 +130,17 @@ class RedNet(nn.Module):
         self.inplanes = 64
         self.final_conv = self._make_transpose(transblock, 64, 3)
 
-        self.final_deconv_custom = nn.ConvTranspose2d(
-            self.inplanes, num_classes, kernel_size=2, stride=2, padding=0, bias=True
-        )
+        self.final_deconv_custom = nn.ConvTranspose2d(self.inplanes,
+                                                      num_classes,
+                                                      kernel_size=2,
+                                                      stride=2,
+                                                      padding=0,
+                                                      bias=True)
 
-        self.out5_conv_custom = nn.Conv2d(
-            256, num_classes, kernel_size=1, stride=1, bias=True
-        )
-        self.out4_conv_custom = nn.Conv2d(
-            128, num_classes, kernel_size=1, stride=1, bias=True
-        )
-        self.out3_conv_custom = nn.Conv2d(
-            64, num_classes, kernel_size=1, stride=1, bias=True
-        )
-        self.out2_conv_custom = nn.Conv2d(
-            64, num_classes, kernel_size=1, stride=1, bias=True
-        )
+        self.out5_conv_custom = nn.Conv2d(256, num_classes, kernel_size=1, stride=1, bias=True)
+        self.out4_conv_custom = nn.Conv2d(128, num_classes, kernel_size=1, stride=1, bias=True)
+        self.out3_conv_custom = nn.Conv2d(64, num_classes, kernel_size=1, stride=1, bias=True)
+        self.out2_conv_custom = nn.Conv2d(64, num_classes, kernel_size=1, stride=1, bias=True)
 
     @classmethod
     def from_config(cls, cfg):
@@ -205,9 +199,7 @@ class RedNet(nn.Module):
             )
         elif self.inplanes != planes:
             upsample = nn.Sequential(
-                nn.Conv2d(
-                    self.inplanes, planes, kernel_size=1, stride=stride, bias=False
-                ),
+                nn.Conv2d(self.inplanes, planes, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(planes),
             )
 
@@ -309,9 +301,7 @@ class RedNet(nn.Module):
 
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
-    return nn.Conv2d(
-        in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False
-    )
+    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride, padding=1, bias=False)
 
 
 class Bottleneck(nn.Module):
@@ -321,9 +311,7 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(
-            planes, planes, kernel_size=3, stride=stride, padding=1, bias=False
-        )
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(planes)
         self.conv3 = nn.Conv2d(planes, planes * 4, kernel_size=1, bias=False)
         self.bn3 = nn.BatchNorm2d(planes * 4)
@@ -402,7 +390,6 @@ class SemanticPredRedNet:
     """
     Directly take a batch of RGB images (tensors) and get batched predictions.
     """
-
     def __init__(self, cfg):
         self.cfg = cfg
         # Setup model
@@ -410,9 +397,7 @@ class SemanticPredRedNet:
         self.model.eval()
 
         ckpt = torch.load(self.cfg.sem_pred_weights)
-        model_state = {
-            k.replace("module.", ""): v for k, v in ckpt["model_state"].items()
-        }
+        model_state = {k.replace("module.", ""): v for k, v in ckpt["model_state"].items()}
         self.model.load_state_dict(model_state)
         # Convert model to device
         sem_gpu_id = self.cfg.sem_gpu_id
@@ -471,19 +456,13 @@ class SemanticPredRedNet:
 
     def process_predictions(self, predictions, raw_depth):
         B, N, H, W = predictions.shape
-        semantic_inputs = torch.zeros(
-            B, self.cfg.n_classes + 1, H, W, device=predictions.device
-        )
-        is_confident = torch.any(
-            predictions >= self.cfg.sem_pred_prob_thr, dim=1
-        )  # (B, H, W)
+        semantic_inputs = torch.zeros(B, self.cfg.n_classes + 1, H, W, device=predictions.device)
+        is_confident = torch.any(predictions >= self.cfg.sem_pred_prob_thr, dim=1)  # (B, H, W)
         predictions_argmax = torch.argmax(predictions, dim=1)  # (B, H, W)
         # Ignore predictions that are lower than the threshold
         predictions_argmax[~is_confident] = THDA_BACKGROUND  # Set to background class
         # Ignore predictions for pixels that are outside the depth threshold
-        is_within_thresh = (raw_depth[:, 0] >= self.cfg.depth_thresh[0]) & (
-            raw_depth[:, 0] <= self.cfg.depth_thresh[1]
-        )
+        is_within_thresh = (raw_depth[:, 0] >= self.cfg.depth_thresh[0]) & (raw_depth[:, 0] <= self.cfg.depth_thresh[1])
         predictions_argmax[~is_within_thresh] = THDA_BACKGROUND
         for i in range(len(mapping_mp3d_to_thda) + 1):
             if i not in mapping_thda_to_objectnav.keys():

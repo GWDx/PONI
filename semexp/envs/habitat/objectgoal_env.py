@@ -21,7 +21,6 @@ from semexp.constants import coco_categories
 
 from semexp.envs.utils.fmm_planner import FMMPlanner
 
-
 inv_coco_categories = {v: k for k, v in coco_categories.items()}
 
 
@@ -37,7 +36,6 @@ class MultiObjectGoal_Env(habitat.RLEnv):
     for loading the dataset, generating episodes, and computing evaluation
     metrics.
     """
-
     def __init__(self, args, rank, config_env, dataset):
         self.args = args
         self.rank = rank
@@ -66,18 +64,14 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         self.split = config_env.DATASET.SPLIT
         self.episodes_dir = config_env.DATASET.EPISODES_DIR.format(split=self.split)
 
-        dataset_info_file = self.episodes_dir + "{split}_info.pbz2".format(
-            split=self.split
-        )
+        dataset_info_file = self.episodes_dir + "{split}_info.pbz2".format(split=self.split)
         with bz2.BZ2File(dataset_info_file, "rb") as f:
             self.dataset_info = cPickle.load(f)
 
         # Specifying action and observation space
         self.action_space = gym.spaces.Discrete(3)
 
-        self.observation_space = gym.spaces.Box(
-            0, 255, (3, args.frame_height, args.frame_width), dtype="uint8"
-        )
+        self.observation_space = gym.spaces.Box(0, 255, (3, args.frame_height, args.frame_width), dtype="uint8")
 
         # Initializations
         self.episode_no = 0
@@ -143,9 +137,7 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         scene_name = self.scene_path.split("/")[-1].split(".")[0]
 
         if self.scene_path != self.last_scene_path:
-            episodes_file = self.episodes_dir + "content/{}_episodes.json.gz".format(
-                scene_name
-            )
+            episodes_file = self.episodes_dir + "content/{}_episodes.json.gz".format(scene_name)
 
             print("Loading episodes from: {}".format(episodes_file))
             with gzip.open(episodes_file, "r") as f:
@@ -162,8 +154,8 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         pos = episode["start_position"]
         rot = quaternion.from_float_array(episode["start_rotation"])
 
-        goal_names = episode["object_categories"][: self.args.num_goals]
-        goal_idxs = episode["object_ids"][: self.args.num_goals]
+        goal_names = episode["object_categories"][:self.args.num_goals]
+        goal_idxs = episode["object_ids"][:self.args.num_goals]
         floor_idx = episode["floor_id"]
 
         # Load scene info
@@ -184,16 +176,11 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         planners = []
         for i, goal_idx in enumerate(goal_idxs):
             planner = FMMPlanner(traversible)
-            selem = skimage.morphology.disk(
-                int(object_boundary * 100.0 / map_resolution)
-            )
+            selem = skimage.morphology.disk(int(object_boundary * 100.0 / map_resolution))
             goal_map = cv2.dilate(sem_map[goal_idx + self.cat_offset], selem)
             planner.set_multi_goal(goal_map, validate_goal=True)
             planners.append(planner)
-            success_condition = (
-                planner.fmm_dist[int(map_loc[0]), int(map_loc[1])]
-                < planner.fmm_dist.max().item()
-            )
+            success_condition = (planner.fmm_dist[int(map_loc[0]), int(map_loc[1])] < planner.fmm_dist.max().item())
             #################################### Debugging #########################################
             if not success_condition:
                 trav_img = np.clip(traversible * 255, 0, 255).astype(np.uint8)
@@ -202,9 +189,7 @@ class MultiObjectGoal_Env(habitat.RLEnv):
                 goal_y, goal_x = np.where(goal_map > 0)
                 for gx, gy in zip(goal_x, goal_y):
                     cv2.circle(trav_img_cpy, (int(gx), int(gy)), 4, (0, 255, 0), -1)
-                cv2.circle(
-                    trav_img_cpy, (int(map_loc[1]), int(map_loc[0])), 4, (255, 0, 0), -1
-                )
+                cv2.circle(trav_img_cpy, (int(map_loc[1]), int(map_loc[0])), 4, (255, 0, 0), -1)
                 trav_img = np.concatenate([trav_img, trav_img_cpy], axis=1)
                 trav_img = cv2.resize(trav_img, None, fx=2.0, fy=2.0)
                 randint = np.random.randint(0, 50000)
@@ -212,12 +197,10 @@ class MultiObjectGoal_Env(habitat.RLEnv):
                 print(f"========> Writing image to {save_path}")
                 cv2.imwrite(save_path, trav_img)
                 print(self.current_eps)
-                print(
-                    f"load_new_episode(): Goal is unreachable from start!\n"
-                    f"Distance to goal: {planner.fmm_dist[int(pos[0]), int(pos[1])]:.3f}\n"
-                    f"Max distance on map: {planner.fmm_dist.max().item():.3f}\n"
-                    f"Goal #{i}\n"
-                )
+                print(f"load_new_episode(): Goal is unreachable from start!\n"
+                      f"Distance to goal: {planner.fmm_dist[int(pos[0]), int(pos[1])]:.3f}\n"
+                      f"Max distance on map: {planner.fmm_dist.max().item():.3f}\n"
+                      f"Goal #{i}\n")
             ########################################################################################
 
         self.gt_planners = planners
@@ -248,10 +231,8 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         # Is greedy path also the optimal path?
         self.info["goal_distance"] = self.starting_distances[-1]
 
-        self.prev_distance = (
-            self.gt_planners[self.active_goal_ix].fmm_dist[self.starting_loc] / 20.0
-            + self.object_boundary
-        )
+        self.prev_distance = (self.gt_planners[self.active_goal_ix].fmm_dist[self.starting_loc] / 20.0 +
+                              self.object_boundary)
         self._env.sim.set_agent_state(pos, rot)
 
         # The following two should match approximately
@@ -295,21 +276,15 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         loc_found = False
         while not loc_found:
             if len(possible_cats) < self.args.num_goals:
-                print(
-                    "Insufficient valid objects for {} in scene {}".format(
-                        floor_height, scene_name
-                    )
-                )
+                print("Insufficient valid objects for {} in scene {}".format(floor_height, scene_name))
                 eps = eps - 1
                 continue
 
             goal_idxs = np.random.permutation(possible_cats).tolist()
-            goal_idxs = goal_idxs[: self.args.num_goals]
+            goal_idxs = goal_idxs[:self.args.num_goals]
             goal_names = [inv_coco_categories[goal_idx] for goal_idx in goal_idxs]
 
-            selem = skimage.morphology.disk(
-                int(object_boundary * 100.0 / map_resolution)
-            )
+            selem = skimage.morphology.disk(int(object_boundary * 100.0 / map_resolution))
             planners = []
             # If all goal locations are not traversible, then ignore category
             cats_to_ignore = []
@@ -342,18 +317,10 @@ class MultiObjectGoal_Env(habitat.RLEnv):
             if possible_starting_locs.sum() != 0:
                 loc_found = True
             else:
-                print(
-                    "Invalid object: {} / {} / {}".format(
-                        scene_name, floor_height, goal_names[0]
-                    )
-                )
+                print("Invalid object: {} / {} / {}".format(scene_name, floor_height, goal_names[0]))
                 possible_cats.remove(goal_idxs[0])
-                scene_info[floor_idx]["sem_map"][
-                    goal_idxs[0] + self.cat_offset, :, :
-                ] = 0.0
-                self.dataset_info[scene_name][floor_idx]["sem_map"][
-                    goal_idxs[0] + self.cat_offset, :, :
-                ] = 0.0
+                scene_info[floor_idx]["sem_map"][goal_idxs[0] + self.cat_offset, :, :] = 0.0
+                self.dataset_info[scene_name][floor_idx]["sem_map"][goal_idxs[0] + self.cat_offset, :, :] = 0.0
 
         loc_found = False
         loop_count = 0
@@ -407,10 +374,8 @@ class MultiObjectGoal_Env(habitat.RLEnv):
 
         self.starting_distances = sdists
         self.optimal_goal_locs = glocs
-        self.prev_distance = (
-            self.gt_planners[self.active_goal_ix].fmm_dist[self.starting_loc] / 20.0
-            + self.object_boundary
-        )
+        self.prev_distance = (self.gt_planners[self.active_goal_ix].fmm_dist[self.starting_loc] / 20.0 +
+                              self.object_boundary)
 
         self._env.sim.set_agent_state(pos, rot)
 
@@ -484,8 +449,8 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         self.path_length = 1e-5
         self.called_reached = False
         self.trajectory_states = []
-        self.episode_progress = np.zeros((self.args.num_goals,))
-        self.episode_progress_dists = np.zeros((self.args.num_goals,))
+        self.episode_progress = np.zeros((self.args.num_goals, ))
+        self.episode_progress_dists = np.zeros((self.args.num_goals, ))
 
         if new_scene:
             obs = super().reset()
@@ -560,12 +525,7 @@ class MultiObjectGoal_Env(habitat.RLEnv):
             if self.active_goal_ix < self.args.num_goals:
                 self.info["goal_cat_id"] = self.goal_idxs[self.active_goal_ix]
                 self.info["goal_name"] = self.goal_names[self.active_goal_ix]
-                self.prev_distance = (
-                    self.gt_planners[self.active_goal_ix].fmm_dist[
-                        curr_loc[0], curr_loc[1]
-                    ]
-                    / 20.0
-                )
+                self.prev_distance = (self.gt_planners[self.active_goal_ix].fmm_dist[curr_loc[0], curr_loc[1]] / 20.0)
 
         # Get pose change
         dx, dy, do = self.get_pose_change()
@@ -604,18 +564,14 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         rotation_world_start = self.episode_start_rotation
 
         agent_position = agent_state.position
-        agent_position = quaternion_rotate_vector(
-            rotation_world_start.inverse(), agent_position - origin
-        )
+        agent_position = quaternion_rotate_vector(rotation_world_start.inverse(), agent_position - origin)
         return [-agent_position[2], agent_position[0]]
 
     def get_compass_reading(self):
         agent_state = super().habitat_env.sim.get_agent_state()
         rotation_world_agent = agent_state.rotation
         rotation_world_start = self.episode_start_rotation
-        compass = self.convert_quat_to_xy_heading(
-            rotation_world_agent.inverse() * rotation_world_start
-        ).item()
+        compass = self.convert_quat_to_xy_heading(rotation_world_agent.inverse() * rotation_world_start).item()
         return [compass]
 
     def get_reward_range(self):
@@ -624,10 +580,7 @@ class MultiObjectGoal_Env(habitat.RLEnv):
 
     def get_reward(self, observations):
         curr_loc = self.sim_continuous_to_sim_map(self.get_sim_location())
-        self.curr_distance = (
-            self.gt_planners[self.active_goal_ix].fmm_dist[curr_loc[0], curr_loc[1]]
-            / 20.0
-        )
+        self.curr_distance = (self.gt_planners[self.active_goal_ix].fmm_dist[curr_loc[0], curr_loc[1]] / 20.0)
 
         reward = (self.prev_distance - self.curr_distance) * self.args.reward_coeff
 
@@ -678,10 +631,7 @@ class MultiObjectGoal_Env(habitat.RLEnv):
             dists = []
             for cloc in clocs:
                 planner.set_goal(cloc)
-                dists.append(
-                    planner.fmm_dist[nlocs[:, 0], nlocs[:, 1]] / 20.0
-                    + self.object_boundary
-                )
+                dists.append(planner.fmm_dist[nlocs[:, 0], nlocs[:, 1]] / 20.0 + self.object_boundary)
             pairwise_dists.append(np.array(dists))
         ############### measure multi-goal shortest path length ################
         # find the shortest path length connecting the starting_loc to
@@ -695,11 +645,7 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         edges = []
         for pdists in pairwise_dists:
             n_curr, n_next = pdists.shape
-            edges += [
-                (cntr + j, cntr + n_curr + k, pdists[j, k])
-                for j in range(n_curr)
-                for k in range(n_next)
-            ]
+            edges += [(cntr + j, cntr + n_curr + k, pdists[j, k]) for j in range(n_curr) for k in range(n_next)]
             cntr += n_curr
         graph.add_weighted_edges_from(edges)
         # add representative nodes that connect all goal instances to a single node
@@ -727,17 +673,14 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         final_goal_nodes = []
         for node in goal_nodes:
             spath = nx.shortest_path(graph, source=0, target=node, weight="weight")
-            dist = nx.shortest_path_length(
-                graph, source=0, target=node, weight="weight"
-            )
+            dist = nx.shortest_path_length(graph, source=0, target=node, weight="weight")
             dists.append(dist)
             final_goal_nodes.append(spath[-2])
         assert len(spath) == self.args.num_goals + 2, print(
             f"\nFailed! Number of goals in episode: {self.args.num_goals}\n"
             f"Shortest path: {spath}\n"
             f"Shortest path dists: {dists}\n"
-            f"Node count: {node_counts}\n"
-        )
+            f"Node count: {node_counts}\n")
         ################# get locations of intermediate goals ##################
         final_goal_locs = [goal_node_to_loc[node] for node in final_goal_nodes]
 
@@ -746,14 +689,12 @@ class MultiObjectGoal_Env(habitat.RLEnv):
     def add_boundary(self, mat, value=1):
         h, w = mat.shape
         new_mat = np.zeros((h + 2, w + 2)) + value
-        new_mat[1 : h + 1, 1 : w + 1] = mat
+        new_mat[1:h + 1, 1:w + 1] = mat
         return new_mat
 
     def get_shortest_path(self, traversible, start, goal):
         traversible = np.copy(traversible)
-        traversible[
-            int(start[0]) - 1 : int(start[0]) + 2, int(start[1]) - 1 : int(start[1]) + 2
-        ] = 1
+        traversible[int(start[0]) - 1:int(start[0]) + 2, int(start[1]) - 1:int(start[1]) + 2] = 1
         traversible = self.add_boundary(traversible)
         goal = self.add_boundary(goal, value=0)
 
@@ -762,13 +703,9 @@ class MultiObjectGoal_Env(habitat.RLEnv):
         goal = cv2.dilate(goal, selem)
         planner.set_multi_goal(goal, validate_goal=True)
         # Goal must be reachable from start
-        assert (
-            planner.fmm_dist[int(start[0]), int(start[1])]
-            < planner.fmm_dist.max().item()
-        ), (
-            "====> MultiObjectGoal_Env: get_shortest_path() failed"
-            " since goal was unreachable!"
-        )
+        assert (planner.fmm_dist[int(start[0]), int(start[1])] <
+                planner.fmm_dist.max().item()), ("====> MultiObjectGoal_Env: get_shortest_path() failed"
+                                                 " since goal was unreachable!")
 
         curr_loc = start
         spath = [curr_loc]

@@ -54,7 +54,7 @@ GIBSON_OBJECT_COLORS = [
 MP3D_CATEGORIES = ["out-of-bounds"] + OBJECT_CATEGORIES["mp3d"]
 MP3D_CATEGORY_MAP = {obj: idx for idx, obj in enumerate(MP3D_CATEGORIES)}
 MP3D_OBJECT_COLORS = []  # Excludes 'out-of-bounds', 'floor', and 'wall'
-for color in d3_40_colors_rgb[: len(MP3D_CATEGORIES) - 3]:
+for color in d3_40_colors_rgb[:len(MP3D_CATEGORIES) - 3]:
     color = (color.astype(np.float32) / 255.0).tolist()
     MP3D_OBJECT_COLORS.append(color)
 
@@ -159,8 +159,7 @@ def extract_scene_point_clouds(
             scn_data = json.load(fp)
         obj_id_to_cat = {
             obj["id"]: obj["class_"]
-            for obj in scn_data["objects"]
-            if obj["class_"] in OBJECT_CATEGORY_MAP
+            for obj in scn_data["objects"] if obj["class_"] in OBJECT_CATEGORY_MAP
         }
     else:
         sim = hab_utils.robust_load_sim(glb_path)
@@ -198,7 +197,7 @@ def extract_scene_point_clouds(
     for obj_id, faces in obj_id_to_faces.items():
         ocat = obj_id_to_cat[obj_id]
         sem_id = OBJECT_CATEGORY_MAP[ocat]
-        color = COLOR_PALETTE[sem_id * 3 : (sem_id + 1) * 3]
+        color = COLOR_PALETTE[sem_id * 3:(sem_id + 1) * 3]
         # Create trimesh vertices and faces from faces
         faces = np.array(faces)  # (N, 3, 3)
         t_pts = hab_utils.dense_sampling_trimesh(faces, sampling_density)
@@ -217,7 +216,7 @@ def extract_scene_point_clouds(
     for t_pt in t_pts:
         obj_id = -1
         sem_id = OBJECT_CATEGORY_MAP["floor"]
-        color = COLOR_PALETTE[sem_id * 3 : (sem_id + 1) * 3]
+        color = COLOR_PALETTE[sem_id * 3:(sem_id + 1) * 3]
         vertices.append(t_pt)
         obj_ids.append(obj_id)
         sem_ids.append(sem_id)
@@ -227,13 +226,11 @@ def extract_scene_point_clouds(
     ############################################################################
     # Get vertices for walls
     ############################################################################
-    per_floor_wall_pc = extract_wall_point_clouds(
-        glb_path, houses_dim_path, sampling_density=sampling_density
-    )
+    per_floor_wall_pc = extract_wall_point_clouds(glb_path, houses_dim_path, sampling_density=sampling_density)
     for _, points in per_floor_wall_pc.items():
         obj_id = -1
         sem_id = OBJECT_CATEGORY_MAP["wall"]
-        color = COLOR_PALETTE[sem_id * 3 : (sem_id + 1) * 3]
+        color = COLOR_PALETTE[sem_id * 3:(sem_id + 1) * 3]
         for p in points:
             vertices.append(p)
             obj_ids.append(obj_id)
@@ -276,17 +273,13 @@ def extract_wall_point_clouds(
     # For each floor in the building, get (x, z) specific y-values for nav locations.
     sim = hab_utils.robust_load_sim(glb_path)
     navmesh_triangles = np.array(sim.pathfinder.build_navmesh_vertices())
-    navmesh_vertices = hab_utils.dense_sampling_trimesh(
-        navmesh_triangles, sampling_density
-    )
+    navmesh_vertices = hab_utils.dense_sampling_trimesh(navmesh_triangles, sampling_density)
     sim.close()
     per_floor_xz_map = {}
     nav_points_per_floor = {}
     for floor_id, floor_dims in per_floor_dims.items():
-        floor_navmesh_vertices = navmesh_vertices[
-            (navmesh_vertices[:, 1] >= floor_dims["ylo"])
-            & (navmesh_vertices[:, 1] < floor_dims["yhi"])
-        ]
+        floor_navmesh_vertices = navmesh_vertices[(navmesh_vertices[:, 1] >= floor_dims["ylo"])
+                                                  & (navmesh_vertices[:, 1] < floor_dims["yhi"])]
         nav_points_per_floor[floor_id] = floor_navmesh_vertices
         # Divide into 0.5m x 0.5m grid cells
         floor_x = np.rint(floor_navmesh_vertices[:, 0] / grid_size).astype(np.int32)
@@ -316,9 +309,7 @@ def extract_wall_point_clouds(
             next_floor_y = per_floor_dims[floor_id + 1]["ylo"]
         else:
             next_floor_y = math.inf
-        floor_mask = (curr_floor_y <= wall_pc[:, 1]) & (
-            wall_pc[:, 1] <= next_floor_y - 0.5
-        )
+        floor_mask = (curr_floor_y <= wall_pc[:, 1]) & (wall_pc[:, 1] <= next_floor_y - 0.5)
         floor_pc = wall_pc[floor_mask, :]
         floor_xz_map = per_floor_xz_map[floor_id]
         # Decide whether each point is a wall point or not
@@ -326,9 +317,7 @@ def extract_wall_point_clouds(
         floor_z_disc = np.around(floor_pc[:, 2] / grid_size).astype(np.int32)
         floor_y = floor_pc[:, 1]
         mask = np.zeros(floor_y.shape[0], dtype=np.bool)
-        for i, (x_disc, z_disc, y) in enumerate(
-            zip(floor_x_disc, floor_z_disc, floor_y)
-        ):
+        for i, (x_disc, z_disc, y) in enumerate(zip(floor_x_disc, floor_z_disc, floor_y)):
             floor_y = per_floor_dims[floor_id]["ylo"]
             if (x_disc, z_disc) in floor_xz_map:
                 floor_y = floor_xz_map[(x_disc, z_disc)]
@@ -343,13 +332,12 @@ def extract_wall_point_clouds(
 def get_scene_boundaries(inputs):
     scene_path, save_path = inputs
     sim = hab_utils.robust_load_sim(scene_path)
-    floor_exts = hab_utils.get_floor_heights(
-        sim, sampling_resolution=SAMPLING_RESOLUTION
-    )
+    floor_exts = hab_utils.get_floor_heights(sim, sampling_resolution=SAMPLING_RESOLUTION)
     scene_name = scene_path.split("/")[-1].split(".")[0]
 
     def convert_lu_bound_to_smnet_bound(
-        lu_bound, buf=np.array([3.0, 0.0, 3.0])  # meters
+            lu_bound,
+            buf=np.array([3.0, 0.0, 3.0])  # meters
     ):
         lower_bound = lu_bound[0] - buf
         upper_bound = lu_bound[1] + buf
@@ -369,12 +357,8 @@ def get_scene_boundaries(inputs):
     scene_boundaries = {}
     scene_boundaries[scene_name] = convert_lu_bound_to_smnet_bound(bounds)
     for fidx, fext in enumerate(floor_exts):
-        bounds = hab_utils.get_navmesh_extents_at_y(
-            sim, y_bounds=(fext["min"] - 0.5, fext["max"] + 0.5)
-        )
-        scene_boundaries[f"{scene_name}_{fidx}"] = convert_lu_bound_to_smnet_bound(
-            bounds
-        )
+        bounds = hab_utils.get_navmesh_extents_at_y(sim, y_bounds=(fext["min"] - 0.5, fext["max"] + 0.5))
+        scene_boundaries[f"{scene_name}_{fidx}"] = convert_lu_bound_to_smnet_bound(bounds)
 
     sim.close()
 
@@ -400,9 +384,7 @@ def visualize_sem_map(sem_map):
     return semantic_img
 
 
-def convert_point_cloud_to_semantic_map(
-    pc_dir, houses_dim_root, save_dir, resolution=0.05
-):
+def convert_point_cloud_to_semantic_map(pc_dir, houses_dim_root, save_dir, resolution=0.05):
 
     obj_files = sorted(glob.glob(f"{pc_dir}/*.h5"))
 
@@ -482,9 +464,7 @@ def convert_point_cloud_to_semantic_map(
             if best_floor_id is None:
                 # Skip the object if it does not belong to any floor
                 # Print message for debugging purposes
-                print(
-                    f"NOTE: Object id {obj_id} from scene {env} does not belong to any floor!"
-                )
+                print(f"NOTE: Object id {obj_id} from scene {env} does not belong to any floor!")
                 continue
             per_floor_obj_ids[best_floor_id].append(obj_id)
 
@@ -499,9 +479,7 @@ def convert_point_cloud_to_semantic_map(
                 next_floor_y = math.inf
 
             # Get navigable and wall vertices based on height thresholds
-            is_on_floor = (all_vertices[:, 1] >= curr_floor_y) & (
-                all_vertices[:, 1] <= next_floor_y - 0.5
-            )
+            is_on_floor = (all_vertices[:, 1] >= curr_floor_y) & (all_vertices[:, 1] <= next_floor_y - 0.5)
             is_floor = (all_sem_ids == OBJECT_CATEGORY_MAP["floor"]) & is_on_floor
             is_wall = (all_sem_ids == OBJECT_CATEGORY_MAP["wall"]) & is_on_floor
 
@@ -557,12 +535,9 @@ def convert_point_cloud_to_semantic_map(
             vertex_to_map_x = (vertices[:, 0] / resolution).round()
             vertex_to_map_z = (vertices[:, 2] / resolution).round()
 
-            outside_map_indices = (
-                (vertex_to_map_x >= world_dim_discret[0])
-                + (vertex_to_map_z >= world_dim_discret[2])
-                + (vertex_to_map_x < 0)
-                + (vertex_to_map_z < 0)
-            )
+            outside_map_indices = ((vertex_to_map_x >= world_dim_discret[0]) +
+                                   (vertex_to_map_z >= world_dim_discret[2]) + (vertex_to_map_x < 0) +
+                                   (vertex_to_map_z < 0))
 
             # assert outside_map_indices.sum() == 0
             y_values = y_values[~outside_map_indices]
@@ -578,12 +553,8 @@ def convert_point_cloud_to_semantic_map(
             y_values += 1.0
 
             # -- projection
-            feat_index = (
-                world_dim_discret[0] * vertex_to_map_z + vertex_to_map_x
-            ).long()
-            flat_highest_z = torch.zeros(
-                int(world_dim_discret[0] * world_dim_discret[2])
-            )
+            feat_index = (world_dim_discret[0] * vertex_to_map_z + vertex_to_map_x).long()
+            flat_highest_z = torch.zeros(int(world_dim_discret[0] * world_dim_discret[2]))
             flat_highest_z, argmax_flat_spatial_map = scatter_max(
                 y_values,
                 feat_index,
@@ -594,15 +565,11 @@ def convert_point_cloud_to_semantic_map(
             argmax_flat_spatial_map[argmax_flat_spatial_map == y_values.shape[0]] = -1
 
             m = argmax_flat_spatial_map >= 0
-            flat_map_instance = (
-                torch.zeros(int(world_dim_discret[0] * world_dim_discret[2])) - 1
-            )
+            flat_map_instance = (torch.zeros(int(world_dim_discret[0] * world_dim_discret[2])) - 1)
 
             flat_map_instance[m.view(-1)] = obj_ids[argmax_flat_spatial_map[m]]
 
-            flat_map_semantic = torch.zeros(
-                int(world_dim_discret[0] * world_dim_discret[2])
-            )
+            flat_map_semantic = torch.zeros(int(world_dim_discret[0] * world_dim_discret[2]))
             flat_map_semantic[m.view(-1)] = sem_ids[argmax_flat_spatial_map[m]]
 
             # -- format data
@@ -612,14 +579,10 @@ def convert_point_cloud_to_semantic_map(
             map_z = flat_highest_z.reshape(world_dim_discret[2], world_dim_discret[0])
             map_z = map_z.numpy()
             map_z = map_z.astype(np.float32)
-            map_instance = flat_map_instance.reshape(
-                world_dim_discret[2], world_dim_discret[0]
-            )
+            map_instance = flat_map_instance.reshape(world_dim_discret[2], world_dim_discret[0])
             map_instance = map_instance.numpy()
             map_instance = map_instance.astype(np.float32)
-            map_semantic = flat_map_semantic.reshape(
-                world_dim_discret[2], world_dim_discret[0]
-            )
+            map_semantic = flat_map_semantic.reshape(world_dim_discret[2], world_dim_discret[0])
             map_semantic = map_semantic.numpy()
             map_semantic = map_semantic.astype(np.float32)
             map_semantic_rgb = visualize_sem_map(map_semantic)
@@ -638,9 +601,7 @@ def convert_point_cloud_to_semantic_map(
         with h5py.File(map_save_path, "w") as f:
             f.create_dataset(f"wall_sem_id", data=OBJECT_CATEGORY_MAP["wall"])
             f.create_dataset(f"floor_sem_id", data=OBJECT_CATEGORY_MAP["floor"])
-            f.create_dataset(
-                f"out-of-bounds_sem_id", data=OBJECT_CATEGORY_MAP["out-of-bounds"]
-            )
+            f.create_dataset(f"out-of-bounds_sem_id", data=OBJECT_CATEGORY_MAP["out-of-bounds"])
             for floor_id, floor_map in per_floor_maps.items():
                 mask = floor_map["mask"]
                 map_z = floor_map["map_z"]
@@ -649,41 +610,25 @@ def convert_point_cloud_to_semantic_map(
                 map_semantic_rgb = floor_map["map_semantic_rgb"]
 
                 f.create_dataset(f"{floor_id}/mask", data=mask, dtype=bool)
-                f.create_dataset(
-                    f"{floor_id}/map_heights", data=map_z, dtype=np.float32
-                )
-                f.create_dataset(
-                    f"{floor_id}/map_instance", data=map_instance, dtype=np.int32
-                )
-                f.create_dataset(
-                    f"{floor_id}/map_semantic", data=map_semantic, dtype=np.int32
-                )
+                f.create_dataset(f"{floor_id}/map_heights", data=map_z, dtype=np.float32)
+                f.create_dataset(f"{floor_id}/map_instance", data=map_instance, dtype=np.int32)
+                f.create_dataset(f"{floor_id}/map_semantic", data=map_semantic, dtype=np.int32)
                 f.create_dataset(f"{floor_id}/map_semantic_rgb", data=map_semantic_rgb)
 
     json.dump(info, open(os.path.join(save_dir, "semmap_GT_info.json"), "w"))
 
 
 if __name__ == "__main__":
-    scene_paths = sorted(
-        glob.glob(
-            os.path.join(SCENES_ROOT, "**/*.glb"),
-            recursive=True,
-        )
-    )
+    scene_paths = sorted(glob.glob(
+        os.path.join(SCENES_ROOT, "**/*.glb"),
+        recursive=True,
+    ))
     # Select only scenes that have corresponding semantics
-    scene_paths = list(
-        filter(
-            lambda x: os.path.isfile(x.replace(".glb", "_semantic.ply")), scene_paths
-        )
-    )
+    scene_paths = list(filter(lambda x: os.path.isfile(x.replace(".glb", "_semantic.ply")), scene_paths))
 
     # Select only scenes from the train and val splits
-    valid_scenes = (
-        SPLIT_SCENES[ACTIVE_DATASET]["train"] + SPLIT_SCENES[ACTIVE_DATASET]["val"]
-    )
-    scene_paths = list(
-        filter(lambda x: os.path.basename(x).split(".")[0] in valid_scenes, scene_paths)
-    )
+    valid_scenes = (SPLIT_SCENES[ACTIVE_DATASET]["train"] + SPLIT_SCENES[ACTIVE_DATASET]["val"])
+    scene_paths = list(filter(lambda x: os.path.basename(x).split(".")[0] in valid_scenes, scene_paths))
 
     print(f"Number of available scenes: {len(scene_paths)}")
 
@@ -711,16 +656,14 @@ if __name__ == "__main__":
         scene_name = scene_path.split("/")[-1].split(".")[0]
         pc_save_path = os.path.join(PC_SAVE_ROOT, f"{scene_name}.h5")
         if not os.path.isfile(pc_save_path):
-            inputs.append(
-                (
-                    extract_scene_point_clouds,
-                    scene_path,
-                    ply_path,
-                    scn_path,
-                    os.path.join(SB_SAVE_ROOT, f"{scene_name}.json"),
-                    pc_save_path,
-                )
-            )
+            inputs.append((
+                extract_scene_point_clouds,
+                scene_path,
+                ply_path,
+                scn_path,
+                os.path.join(SB_SAVE_ROOT, f"{scene_name}.json"),
+                pc_save_path,
+            ))
 
     _ = list(tqdm.tqdm(pool.imap(_aux_fn, inputs), total=len(inputs)))
 

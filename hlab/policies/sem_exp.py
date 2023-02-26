@@ -27,7 +27,7 @@ class SemExp(RL_Policy):
         ngc = 8 + cfg.GLOBAL_AGENT.num_sem_categories
         es = 2
         obs_space = gym.spaces.Box(0, 1, (ngc, local_w, local_h), dtype="uint8")
-        act_space = gym.spaces.Box(low=0.0, high=0.99, shape=(2,), dtype=np.float32)
+        act_space = gym.spaces.Box(low=0.0, high=0.99, shape=(2, ), dtype=np.float32)
 
         return cls(
             cfg,
@@ -52,9 +52,7 @@ class SemExp(RL_Policy):
             print(f"=====> SemExp: No pretrained weights available.")
 
     def act(self, inputs, rnn_hxs, masks, extras=None, deterministic=False, **kwargs):
-        outputs = super().act(
-            inputs, rnn_hxs, masks, extras=extras, deterministic=deterministic
-        )
+        outputs = super().act(inputs, rnn_hxs, masks, extras=extras, deterministic=deterministic)
         value, action, action_log_probs, rnn_hxs = outputs
         action = nn.Sigmoid()(action)
         return value, action, action_log_probs, rnn_hxs

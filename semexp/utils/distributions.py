@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 
 from .model import AddBias
-
 """
 Modify standard PyTorch distributions so they are compatible with this code.
 """
@@ -16,16 +15,12 @@ old_sample = FixedCategorical.sample
 FixedCategorical.sample = lambda self: old_sample(self)
 
 log_prob_cat = FixedCategorical.log_prob
-FixedCategorical.log_probs = lambda self, actions: log_prob_cat(
-    self, actions.squeeze(-1)
-)
+FixedCategorical.log_probs = lambda self, actions: log_prob_cat(self, actions.squeeze(-1))
 FixedCategorical.mode = lambda self: self.probs.argmax(dim=1, keepdim=True)
 
 FixedNormal = torch.distributions.Normal
 log_prob_normal = FixedNormal.log_prob
-FixedNormal.log_probs = lambda self, actions: log_prob_normal(self, actions).sum(
-    -1, keepdim=False
-)
+FixedNormal.log_probs = lambda self, actions: log_prob_normal(self, actions).sum(-1, keepdim=False)
 
 entropy = FixedNormal.entropy
 FixedNormal.entropy = lambda self: entropy(self).sum(-1)

@@ -28,18 +28,14 @@ class SemanticPredMaskRCNN:
         image_list = []
         img = img[:, :, ::-1]
         image_list.append(img)
-        seg_predictions, vis_output = self.segmentation_model.get_predictions(
-            image_list, visualize=args.visualize == 2
-        )
+        seg_predictions, vis_output = self.segmentation_model.get_predictions(image_list, visualize=args.visualize == 2)
 
         if args.visualize == 2:
             img = vis_output.get_image()
 
         semantic_input = np.zeros((img.shape[0], img.shape[1], 15 + 1))
 
-        for j, class_idx in enumerate(
-            seg_predictions[0]["instances"].pred_classes.cpu().numpy()
-        ):
+        for j, class_idx in enumerate(seg_predictions[0]["instances"].pred_classes.cpu().numpy()):
             if class_idx in list(coco_categories_mapping.keys()):
                 idx = coco_categories_mapping[class_idx]
                 obj_mask = seg_predictions[0]["instances"].pred_masks[j] * 1.0
@@ -63,9 +59,7 @@ class ImageSegmentation:
             --confidence-threshold {}
             --opts MODEL.WEIGHTS
             {}
-            """.format(
-            args.sem_pred_prob_thr, args.sem_pred_weights
-        )
+            """.format(args.sem_pred_prob_thr, args.sem_pred_weights)
 
         if args.sem_gpu_id == -2:
             string_args += """ MODEL.DEVICE cpu"""
@@ -93,9 +87,7 @@ def setup_cfg(args):
     # Set score_threshold for builtin models
     cfg.MODEL.RETINANET.SCORE_THRESH_TEST = args.confidence_threshold
     cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = args.confidence_threshold
-    cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = (
-        args.confidence_threshold
-    )
+    cfg.MODEL.PANOPTIC_FPN.COMBINE.INSTANCES_CONFIDENCE_THRESH = (args.confidence_threshold)
     cfg.freeze()
     return cfg
 
@@ -108,13 +100,9 @@ def get_seg_parser():
         metavar="FILE",
         help="path to config file",
     )
-    parser.add_argument(
-        "--webcam", action="store_true", help="Take inputs from webcam."
-    )
+    parser.add_argument("--webcam", action="store_true", help="Take inputs from webcam.")
     parser.add_argument("--video-input", help="Path to video file.")
-    parser.add_argument(
-        "--input", nargs="+", help="A list of space separated input images"
-    )
+    parser.add_argument("--input", nargs="+", help="A list of space separated input images")
     parser.add_argument(
         "--output",
         help="A file or directory to save output visualizations. "
@@ -143,9 +131,7 @@ class VisualizationDemo(object):
             cfg (CfgNode):
             instance_mode (ColorMode):
         """
-        self.metadata = MetadataCatalog.get(
-            cfg.DATASETS.TEST[0] if len(cfg.DATASETS.TEST) else "__unused"
-        )
+        self.metadata = MetadataCatalog.get(cfg.DATASETS.TEST[0] if len(cfg.DATASETS.TEST) else "__unused")
         self.cpu_device = torch.device("cpu")
         self.instance_mode = instance_mode
 
@@ -168,24 +154,16 @@ class VisualizationDemo(object):
         if visualize:
             predictions = all_predictions[0]
             image = image_list[0]
-            visualizer = Visualizer(
-                image, self.metadata, instance_mode=self.instance_mode
-            )
+            visualizer = Visualizer(image, self.metadata, instance_mode=self.instance_mode)
             if "panoptic_seg" in predictions:
                 panoptic_seg, segments_info = predictions["panoptic_seg"]
-                vis_output = visualizer.draw_panoptic_seg_predictions(
-                    panoptic_seg.to(self.cpu_device), segments_info
-                )
+                vis_output = visualizer.draw_panoptic_seg_predictions(panoptic_seg.to(self.cpu_device), segments_info)
             else:
                 if "sem_seg" in predictions:
-                    vis_output = visualizer.draw_sem_seg(
-                        predictions["sem_seg"].argmax(dim=0).to(self.cpu_device)
-                    )
+                    vis_output = visualizer.draw_sem_seg(predictions["sem_seg"].argmax(dim=0).to(self.cpu_device))
                 if "instances" in predictions:
                     instances = predictions["instances"].to(self.cpu_device)
-                    vis_output = visualizer.draw_instance_predictions(
-                        predictions=instances
-                    )
+                    vis_output = visualizer.draw_instance_predictions(predictions=instances)
 
         return all_predictions, vis_output
 
@@ -209,7 +187,6 @@ class BatchPredictor:
             from cfg.DATASETS.TEST.
 
     """
-
     def __init__(self, cfg):
         self.cfg = cfg.clone()  # cfg can be modified by model
         self.model = build_model(self.cfg)

@@ -2,13 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 # =========================== Sub-parts of the U-Net model ============================
 
 
 class double_conv(nn.Module):
     """(conv => BN => ReLU) * 2"""
-
     def __init__(self, in_ch, out_ch):
         super(double_conv, self).__init__()
         self.conv = nn.Sequential(
@@ -290,15 +288,11 @@ def get_semantic_encoder_decoder(cfg):
             bilinear=model_cfg.unet_bilinear_interp,
         )
     elif output_type == "dirs":
-        object_decoder = DirectionDecoder(
-            model_cfg.num_categories, model_cfg.ndirs, model_cfg.nsf
-        )
+        object_decoder = DirectionDecoder(model_cfg.num_categories, model_cfg.ndirs, model_cfg.nsf)
     elif output_type == "locs":
         object_decoder = PositionDecoder(model_cfg.num_categories, model_cfg.nsf)
     elif output_type == "acts":
-        object_decoder = ActionDecoder(
-            model_cfg.num_categories, model_cfg.nsf, data_cfg.num_actions
-        )
+        object_decoder = ActionDecoder(model_cfg.num_categories, model_cfg.nsf, data_cfg.num_actions)
     if model_cfg.enable_area_head:
         area_decoder = UNetDecoder(
             1,

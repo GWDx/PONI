@@ -89,9 +89,7 @@ def dense_sampling_util(p1, p2, p3, sampling_resolution):
     for i in np.arange(0, d1, sampling_resolution):
         b = (d1 - i) * d2 / d1
 
-        js = np.array(
-            [[1, i, j] for j in np.arange(0, b, sampling_resolution)]
-        )  # (N, 3)
+        js = np.array([[1, i, j] for j in np.arange(0, b, sampling_resolution)])  # (N, 3)
         if len(js) == 0:
             continue
         x = np.stack([p1, n1, n2], axis=1)  # (D, 3)
@@ -110,9 +108,7 @@ def get_floor_heights(sim, sampling_resolution=0.10):
         sim - habitat simulator instance
         max_points_to_sample - number of navigable points to randomly sample
     """
-    nav_points = get_dense_navigable_points(
-        sim, sampling_resolution=sampling_resolution
-    )
+    nav_points = get_dense_navigable_points(sim, sampling_resolution=sampling_resolution)
     nav_points = np.stack(nav_points, axis=0)
     y_coors = np.around(nav_points[:, 1], decimals=1)
     # Remove outliers (like staircases)
@@ -161,10 +157,8 @@ def get_navmesh_extents_at_y(sim, y_bounds=None):
         assert len(y_bounds) == 2
         assert y_bounds[0] < y_bounds[1]
         navmesh_vertices = np.array(sim.pathfinder.build_navmesh_vertices())
-        navmesh_vertices = navmesh_vertices[
-            (y_bounds[0] <= navmesh_vertices[:, 1])
-            & (navmesh_vertices[:, 1] <= y_bounds[1])
-        ]
+        navmesh_vertices = navmesh_vertices[(y_bounds[0] <= navmesh_vertices[:, 1])
+                                            & (navmesh_vertices[:, 1] <= y_bounds[1])]
         lower_bound = navmesh_vertices.min(axis=0)
         upper_bound = navmesh_vertices.max(axis=0)
     return lower_bound, upper_bound

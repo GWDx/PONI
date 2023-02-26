@@ -7,7 +7,6 @@ import tqdm
 from poni.dataset import SemanticMapDataset
 from poni.default import get_cfg
 
-
 assert "ACTIVE_DATASET" in os.environ
 ACTIVE_DATASET = os.environ["ACTIVE_DATASET"]
 SEED = 123
