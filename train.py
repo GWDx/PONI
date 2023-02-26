@@ -391,14 +391,16 @@ class Trainer:
     def __init__(self, cfg):
         self.cfg = cfg
 
-        self.is_distributed = self.get_distrib_size()[2] > 1
-
+        self.is_distributed = False
         # Setup DDP
         local_rank, world_rank, world_size = 0, 0, 1
         if self.is_distributed:
             local_rank, world_rank, world_size = self.ddp_setup()
         self.rank = world_rank
         self.world_size = world_size
+
+        print(f"=======> (0.1) breakpoint reached in local proc: {local_rank}")
+        print(f"=======> (0.2) breakpoint reached in local proc: {self.is_distributed}")
 
         # Seed everything
         random.seed(cfg.SEED + world_rank)
