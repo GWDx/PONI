@@ -71,8 +71,8 @@ if ACTIVE_DATASET == "mp3d":
     SB_SAVE_ROOT = "data/semantic_maps/mp3d/scene_boundaries"
     PC_SAVE_ROOT = "data/semantic_maps/mp3d/point_clouds"
     SEM_SAVE_ROOT = "data/semantic_maps/mp3d/semantic_maps"
-    NUM_WORKERS = 8
-    MAX_TASKS_PER_CHILD = 2
+    NUM_WORKERS = 1
+    MAX_TASKS_PER_CHILD = 1
     SAMPLING_RESOLUTION = 0.20
     WALL_THRESH = [0.25, 1.25]
 else:
@@ -83,7 +83,7 @@ else:
     SB_SAVE_ROOT = "data/semantic_maps/gibson/scene_boundaries"
     PC_SAVE_ROOT = "data/semantic_maps/gibson/point_clouds"
     SEM_SAVE_ROOT = "data/semantic_maps/gibson/semantic_maps"
-    NUM_WORKERS = 12
+    NUM_WORKERS = 1
     MAX_TASKS_PER_CHILD = None
     SAMPLING_RESOLUTION = 0.10
     WALL_THRESH = [0.25, 1.25]

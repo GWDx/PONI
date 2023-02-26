@@ -12,7 +12,7 @@ ACTIVE_DATASET = os.environ["ACTIVE_DATASET"]
 SEED = 123
 DATA_ROOT = "data/semantic_maps/{}/semantic_maps".format(ACTIVE_DATASET)
 SAVE_ROOT = "data/semantic_maps/{}/fmm_dists_{}".format(ACTIVE_DATASET, SEED)
-NUM_WORKERS = 24
+NUM_WORKERS = 12
 
 
 def save_data(inputs):
