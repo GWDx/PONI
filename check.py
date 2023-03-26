@@ -5,7 +5,7 @@ targetFiles = [
     "Allensville", "Beechwood", "Marstons", "Benevolence", "Merom", "Coffeen", "Mifflinburg", "Newfields", "Onaga",
     "Cosmos", "Pinesdale", "Pomaria", "Forkland", "Ranchester", "Hanson", "Shelbyville", "Hiteman", "Stockman",
     "Klickitat", "Tolstoy", "Lakeville", "Wainscott", "Leonardo", "Lindenwood", "Woodbine", "Darden", "Collierville",
-    "Markleeville", "Wiconisco", "Corozal "
+    "Markleeville", "Wiconisco", "Corozal"
 ]
 
 files = os.listdir('data/semantic_maps/gibson/fmm_dists_123')
